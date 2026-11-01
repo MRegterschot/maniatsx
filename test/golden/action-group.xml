@@ -34,7 +34,7 @@ main() {
 
   sleep(300);
   widget.Show();
-  declare Boolean actionGroupIsOpen = false for This;
+  declare Boolean actionGroupIsOpen for This = false;
   while (True) {
     yield;
     foreach (Event in PendingEvents) {

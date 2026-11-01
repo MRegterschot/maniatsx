@@ -28,7 +28,7 @@ export function ActionGroup(props: ActionGroupProps) {
   const anim = "CAnimManager::EAnimManagerEasing::ExpInOut";
   return (
     <Widget id="action-group-widget" position={props.position ?? [-156, 85]}>
-      <Script.Main>{"declare Boolean actionGroupIsOpen = false for This;"}</Script.Main>
+      <Script.Main>{"declare Boolean actionGroupIsOpen for This = false;"}</Script.Main>
       <Script.Events>{ms`
         if (Event.Control.HasClass("trigger") && Event.Type == CMlScriptEvent::Type::MouseClick) {
           declare Boolean actionGroupIsOpen for This;
