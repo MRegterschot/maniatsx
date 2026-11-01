@@ -104,6 +104,17 @@ export function useRenderScope<T>(key: symbol): T | undefined {
   return undefined;
 }
 
+// Scope values with an onRawScript method are told when a raw <script> is written below them.
+function reportRawScript(st: State): void {
+  for (let i = st.scopes.length - 1; i >= 0; i--) {
+    const value = st.scopes[i]!.value as { onRawScript?: () => void } | null | undefined;
+    if (typeof value?.onRawScript === "function") {
+      value.onRawScript();
+      return;
+    }
+  }
+}
+
 function requireState(fn: string): State {
   if (!current) throw new Error(`${fn} can only be called while rendering`);
   return current;
@@ -224,6 +235,7 @@ function writeElement(tag: string, props: VNode["props"], st: State): void {
   const open = `<${tag}${writeAttributes(tag, props, st)}`;
 
   if (tag === "script") {
+    reportRawScript(st);
     const parts: string[] = [];
     collectScriptText(props.children as Node, parts);
     const code = parts.join("");
