@@ -1,0 +1,41 @@
+{
+  "name": "maniatsx",
+  "version": "0.1.0",
+  "description": "Write Trackmania manialinks in TSX",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "files": ["dist", "vendor/LICENSE-manialink-xsd"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./jsx-runtime": {
+      "types": "./dist/jsx-runtime.d.ts",
+      "default": "./dist/jsx-runtime.js"
+    },
+    "./jsx-dev-runtime": {
+      "types": "./dist/jsx-dev-runtime.d.ts",
+      "default": "./dist/jsx-dev-runtime.js"
+    }
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "gen": "bun scripts/gen-intrinsics.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "bench": "bun bench/render.bench.tsx",
+    "format": "prettier --write src test scripts examples bench"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.4",
+    "fast-xml-parser": "^5.11.2",
+    "prettier": "^3.9.10",
+    "typescript": "^7.0.2",
+    "xmllint-wasm": "^5.3.0"
+  }
+}
