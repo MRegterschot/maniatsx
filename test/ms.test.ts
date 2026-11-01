@@ -14,9 +14,9 @@ describe("numbers", () => {
   test("never uses exponent notation", () => {
     expect(ms`${1e-7}`.code).toBe("0.0000001");
     expect(ms`${1.5e-10}`.code).toBe("0.00000000015");
-    expect(ms`${1e21}`.code).toBe("1000000000000000000000");
-    expect(ms`${-1.25e21}`.code).toBe("-1250000000000000000000");
-    expect(ms`${1.2345e25}`.code).toBe("12345000000000000000000000");
+    // Large whole numbers overflow Integer, so they must go through ms.real
+    expect(ms`${ms.real(1e21)}`.code).toBe("1000000000000000000000.");
+    expect(ms`${ms.real(-1.25e21)}`.code).toBe("-1250000000000000000000.");
   });
 
   test("non-finite throws and names the interpolation", () => {
