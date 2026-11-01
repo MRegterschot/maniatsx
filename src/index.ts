@@ -16,5 +16,6 @@ export type {
   ScriptPartProps,
 } from "./manialink.tsx";
 
+export type { ManialinkLayer } from "./intrinsics-overrides.ts";
 export { Dico } from "./dico.tsx";
 export type { DicoProps } from "./dico.tsx";

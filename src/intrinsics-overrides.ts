@@ -13,10 +13,15 @@ type FontPatch<T> = Patch<T, { textfont?: TextFont }>;
 
 type Base = DropLegacy<Gen>;
 
+// Only "ScoresTable" (shown with the scoreboard) is confirmed, via EvoSC's production templates
+export type ManialinkLayer = "ScoresTable" | (string & {});
+
 export interface IntrinsicElements extends Omit<
   Base,
-  "label" | "entry" | "textedit" | "fileentry" | "style"
+  "label" | "entry" | "textedit" | "fileentry" | "style" | "manialink"
 > {
+  // XSD lacks layer, which TM2020 controllers use
+  manialink: Patch<Base["manialink"], { layer?: ManialinkLayer }>;
   include: { url: string; key?: string | number; children?: never };
   // XSD types linespacing as bool, the game takes a real; text may be a number (scores, times)
   label: FontPatch<

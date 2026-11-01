@@ -138,3 +138,7 @@ export const badTuple = <quad pos={[1, 2, 3]} />;
 test("type tests are checked by tsc", () => {
   expect(true).toBe(true);
 });
+
+// layer is missing from the XSD but used by TM2020 controllers
+const withLayer = <manialink version={3} layer="ScoresTable" />;
+void withLayer;

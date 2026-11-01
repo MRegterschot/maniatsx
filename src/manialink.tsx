@@ -2,6 +2,7 @@ import { dedent, ms } from "./ms.ts";
 import { raw } from "./raw.ts";
 import { renderChildren, useRenderScope } from "./render.ts";
 import { jsx } from "./jsx-runtime.ts";
+import type { ManialinkLayer } from "./intrinsics-overrides.ts";
 import { MS_CODE, type MsCode, type Node } from "./vnode.ts";
 
 const PROLOG = '<?xml version="1.0" encoding="utf-8" standalone="yes"?>';
@@ -18,7 +19,8 @@ export interface ManialinkProps {
   /** Manialink id (the game's page id). */
   id: string;
   name?: string;
-  layer?: string;
+  /** Display layer; "ScoresTable" shows the page with the scoreboard. */
+  layer?: ManialinkLayer;
   /** Emit the XML prolog. Default: true. */
   prolog?: boolean;
   children?: Node;
@@ -179,7 +181,7 @@ export function Manialink(props: ManialinkProps): Node {
     throw new Error("<Manialink> cannot be nested inside another <Manialink>");
   if (typeof props.id !== "string" || props.id === "")
     throw new Error("<Manialink> requires an id");
-  // jsx() directly: the generated <manialink> typings lack `layer`
+  // jsx() directly so props pass through without re-spreading
   const element = jsx("manialink", {
     id: props.id,
     name: props.name,

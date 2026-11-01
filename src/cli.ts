@@ -105,7 +105,7 @@ async function main(args: string[]): Promise<void> {
   }
   if (prologCheck && !/^\s*<\?xml\s/.test(xml)) console.error("Warning: XML prolog is missing");
   if (out) await Bun.write(resolve(out), xml);
-  else process.stdout.write(xml);
+  else process.stdout.write(xml.endsWith("\n") ? xml : xml + "\n");
   console.error(`Output: ${bytes} bytes`);
 }
 
