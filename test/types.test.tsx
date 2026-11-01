@@ -22,6 +22,8 @@ export const posForms = (
   </>
 );
 
+export const includedPage = <include url="./page.xml" key="page" />;
+
 export const customFont = <label textfont="file://Media/Font/Custom.ttf" />;
 
 export const enums = (
@@ -120,6 +122,12 @@ export const labelChildren = <label>text</label>;
 
 // @ts-expect-error element children are not allowed inside script
 export const scriptElement = <script>{<quad />}</script>;
+
+// @ts-expect-error include requires a url
+export const includeNoUrl = <include />;
+
+// @ts-expect-error include cannot have children
+export const includeChildren = <include url="./page.xml" children={<quad />} />;
 
 // @ts-expect-error language needs an id
 export const languageNoId = <language />;

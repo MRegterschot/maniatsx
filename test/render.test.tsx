@@ -17,6 +17,12 @@ describe("elements and attributes", () => {
     expect(render(<frame />)).toBe("<frame />");
   });
 
+  test("renders an included page", () => {
+    expect(render(<include url="./page.xml?a=1&b=2" />)).toBe(
+      '<include url="./page.xml?a=1&amp;b=2" />',
+    );
+  });
+
   test("compact nesting has no whitespace", () => {
     expect(
       render(

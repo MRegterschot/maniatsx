@@ -45,6 +45,19 @@ const xml = render(
 - `data-*` is allowed on every element. Values are XML-escaped, so player text in attributes is safe.
 - Text children are only allowed in `<script>`, `<style>` and `<stylesheet>`. Use `text=` on `<label>`.
 
+Use `<include url="./page.xml" />` to include a local or remote manialink file.
+
+## Dictionaries
+
+```tsx
+import { Dico } from "maniatsx";
+
+<Dico translations={{ fr: { greeting: "Salut" }, en: { greeting: "Hello" } }} />;
+<label textid="greeting" />;
+```
+
+Languages and entries follow insertion order; the last language is the game’s fallback. Text IDs must be XML names, and an empty dictionary throws.
+
 ## Components and context
 
 Components are plain synchronous functions `(props) => Node`. `useContext` works only during a render, so call it in a component body.

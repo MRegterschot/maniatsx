@@ -17,6 +17,7 @@ export interface IntrinsicElements extends Omit<
   Base,
   "label" | "entry" | "textedit" | "fileentry" | "style"
 > {
+  include: { url: string; key?: string | number; children?: never };
   // XSD types linespacing as bool, the game takes a real; text may be a number (scores, times)
   label: FontPatch<
     Patch<

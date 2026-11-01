@@ -15,3 +15,6 @@ export type {
   ScriptIncludeProps,
   ScriptPartProps,
 } from "./manialink.tsx";
+
+export { Dico } from "./dico.tsx";
+export type { DicoProps } from "./dico.tsx";

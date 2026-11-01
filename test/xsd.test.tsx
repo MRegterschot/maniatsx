@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { validateXML } from "xmllint-wasm";
-import { Manialink, Script, ms, raw, render, type Node } from "../src/index.ts";
+import { Dico, Manialink, Script, ms, raw, render, type Node } from "../src/index.ts";
 
 const root = new URL("../", import.meta.url);
 const text = (url: URL) => readFileSync(url, "utf8");
@@ -175,6 +175,7 @@ describe("focused renders validate", () => {
         <language id="en">{raw("<title>Hello</title>")}</language>
       </dico>
     ),
+    dictionary: <Dico translations={{ en: { title: "Hello & welcome" } }} />,
     timeout: <timeout>{30000}</timeout>,
   };
 

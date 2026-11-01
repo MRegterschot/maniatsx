@@ -97,6 +97,13 @@ export function renderChildren(node: Node, scope?: { key: symbol; value: unknown
   }
 }
 
+// Dictionary entries need inline text while retaining the current indentation.
+export function renderTextElement(name: string, text: string): string {
+  const st = requireState("renderTextElement()");
+  const xml = `<${name}>${escapeText(text)}</${name}>`;
+  return st.pretty ? "  ".repeat(st.depth) + xml + "\n" : xml;
+}
+
 // M3 hook: the value of the nearest enclosing scope opened with this key.
 export function useRenderScope<T>(key: symbol): T | undefined {
   const st = requireState("useRenderScope()");
