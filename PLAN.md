@@ -127,7 +127,7 @@ Render pipeline: `render(node)` → walk VNodes depth-first with a render contex
 | M3 | `<Manialink>`, `Script.*` composition, `ms` | subagent (Sonnet) | tests for ordering, dedupe, conflicts, literal escaping |
 | M4 | Validation and quality: XSD validation tests, examples porting `window.hbs` + `action-group.hbs`, golden files, benchmark, README | subagent (Haiku for README/bench, Sonnet for examples) | all checks green; README shows setup + API |
 | M5 | Review and real-server smoke test | lead + user | rendered example shows up in game without script errors |
-| M6 (later, other repo) | Integrate into gocontrolpanel gbx-service and decide the plugin story | separate plan | |
+| M6 (later, other repo) | Integrate into gocontrolpanel gbx-service, vendored as a Bun workspace package `packages/maniatsx` (decided 2026-11-02); decide the plugin story | separate plan | |
 
 Each milestone ends with `bun run typecheck && bun test` green, and the lead reviews the diff.
 

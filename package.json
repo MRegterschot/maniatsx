@@ -35,9 +35,12 @@
     "build": "rm -rf dist && tsc -p tsconfig.build.json",
     "bench": "bun bench/render.bench.tsx",
     "format": "prettier --write src test scripts examples bench",
-    "render": "bun src/cli.ts"
+    "render": "bun src/cli.ts",
+    "gen:maniascript": "bun scripts/gen-maniascript-api.ts"
   },
   "devDependencies": {
+    "@maniascript/api": "^10.0.0",
+    "@maniascript/parser": "^16.0.0",
     "@types/bun": "^1.4.4",
     "fast-xml-parser": "^5.11.2",
     "prettier": "^3.9.10",

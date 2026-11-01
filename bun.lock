@@ -5,6 +5,8 @@
     "": {
       "name": "maniatsx",
       "devDependencies": {
+        "@maniascript/api": "^10.0.0",
+        "@maniascript/parser": "^16.0.0",
         "@types/bun": "^1.4.4",
         "fast-xml-parser": "^5.11.2",
         "prettier": "^3.9.10",
@@ -14,6 +16,10 @@
     },
   },
   "packages": {
+    "@maniascript/api": ["@maniascript/api@10.0.0", "", { "dependencies": { "antlr4ng": "^3.0.16" }, "bin": { "generate-api": "./dist/bin.mjs" } }, "sha512-ZFhroQn/sfiMV9mHlIduIENIXnvnlpP/TiRAUJKjRpgeNBtAeFSNtzUXPc/tqjp65R8EVsR/PorJk9iRO9Yyqw=="],
+
+    "@maniascript/parser": ["@maniascript/parser@16.0.0", "", { "dependencies": { "@maniascript/api": "^10.0.0", "antlr4ng": "^3.0.16" } }, "sha512-eS5vrnTNomoQU58y6n/PHvAcFtemCXHerEzZ++neHqjRDG5mGabJPHQ8+d60b+xppC3mcfI/K7xzkAXzxgWbOg=="],
+
     "@nodable/entities": ["@nodable/entities@3.1.0", "", {}, "sha512-LsS/DjHr+uDM647Gru/cA8+J3a3HfhttwCKLyuoyN7yXTFCxKBtSgMQBvrW9yNPa2/zDRUNuGPaH5QUFoa4arQ=="],
 
     "@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
@@ -59,6 +65,8 @@
     "@typescript/typescript-win32-arm64": ["@typescript/typescript-win32-arm64@7.0.2", "", { "os": "win32", "cpu": "arm64" }, "sha512-Gyl1Vy6OsWesLzmq+EP0Fb7b4Nid5232AvcA2SFcdYreldpNtYFFofPjnt62y9hQy7VTaZp65ICJjuAQRaVcIQ=="],
 
     "@typescript/typescript-win32-x64": ["@typescript/typescript-win32-x64@7.0.2", "", { "os": "win32", "cpu": "x64" }, "sha512-0BQ3HkAHHlKLSp1qRvf3SUhGpGsDuhB/jgFw75guyqbxJqEaS0Cw/VFO8i2nHglJUzQCRtMMR/IBAKE3ETMC4g=="],
+
+    "antlr4ng": ["antlr4ng@3.0.16", "", {}, "sha512-DQuJkC7kX3xunfF4K2KsWTSvoxxslv+FQp/WHQZTJSsH2Ec3QfFmrxC3Nky2ok9yglXn6nHM4zUaVDxcN5f6kA=="],
 
     "anynum": ["anynum@1.0.1", "", {}, "sha512-N6//FLET/tXYNM/F6ABca1oH6fWB+KlTt909Le28WMDBk8oaT4vY17DCrwg2MvmuqUKt3Ni4N5dGJ/EoBgcO6A=="],
 
