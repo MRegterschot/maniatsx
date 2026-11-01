@@ -8,7 +8,7 @@ TSX → Trackmania Manialink v3 XML renderer. `PLAN.md` holds the spec (requirem
 - `bun test`: unit, type, golden, and XSD validation tests in `test/`.
 - `bun run gen`: regenerate `src/generated/intrinsics.ts` from `vendor/manialink_v3.xsd`.
 - `bun run build`: emit `dist/` (ESM + `.d.ts`).
-- Format changed files with `bunx prettier --write <files>`.
+- Format changed files with `./node_modules/.bin/prettier --write <files>`. Never use `bunx tsc` or `bunx prettier`: under WSL it can resolve to a different binary.
 
 ## Conventions
 
