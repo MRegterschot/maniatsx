@@ -101,8 +101,10 @@ export const badEnum = <label valign="middle" />;
 // @ts-expect-error string for a boolean attribute
 export const badBool = <frame hidden="1" />;
 
-// @ts-expect-error number for a string attribute
-export const badString = <label text={5} />;
+// @ts-expect-error boolean for a string attribute
+export const badString = <label text={true} />;
+
+export const numericLabel = <label text={42} textprefix={1.5} />;
 
 // @ts-expect-error legacy v2 attribute
 export const legacyPos = <quad posn="0 0 0" />;

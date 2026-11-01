@@ -133,6 +133,19 @@ describe("children", () => {
     ).toThrow(/<frame>/);
   });
 
+  test("timeout takes a non-negative integer as text", () => {
+    expect(render(<timeout>{30000}</timeout>)).toBe("<timeout>30000</timeout>");
+    expect(() => render(<timeout>{-1}</timeout>)).toThrow(/<timeout>/);
+    expect(() => render(<timeout>{1.5}</timeout>)).toThrow(/<timeout>/);
+    expect(() => render(jsx("timeout", { children: "5" }))).toThrow(/<timeout>/);
+  });
+
+  test("label text and textprefix accept numbers", () => {
+    expect(render(<label text={42} textprefix={1.5} />)).toBe(
+      '<label text="42" textprefix="1.5" />',
+    );
+  });
+
   test("style and stylesheet allow escaped text", () => {
     expect(render(jsx("style", { children: "a<b&c" }))).toBe("<style>a&lt;b&amp;c</style>");
   });

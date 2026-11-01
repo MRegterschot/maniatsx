@@ -31,6 +31,8 @@ interface State {
 
 const NAME = /^[A-Za-z_][\w.:-]*$/;
 const STYLE_TEXT = new Set(["style", "stylesheet"]);
+// <timeout> holds a non-negative Integer as text (XSD xs:integer, 0..2147483647)
+const TIMEOUT_MAX = 2147483647;
 
 let current: State | null = null;
 
@@ -146,6 +148,13 @@ function pushText(st: State, text: string): void {
 function walk(node: Node, st: State): void {
   if (node === null || node === undefined || typeof node === "boolean") return;
   if (typeof node === "string" || typeof node === "number") {
+    if (typeof node === "number" && st.element === "timeout") {
+      if (!Number.isInteger(node) || node < 0 || node > TIMEOUT_MAX) {
+        throw new Error(`<timeout> must contain an integer from 0 to ${TIMEOUT_MAX}, got ${node}`);
+      }
+      pushText(st, String(node));
+      return;
+    }
     const text = typeof node === "number" ? formatNumber(node) : node;
     if (st.element !== null && STYLE_TEXT.has(st.element)) {
       pushText(st, escapeText(text));

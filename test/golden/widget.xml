@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<manialink id="example-widget" name="TMCP:example-widget" version="3">
+  <frame id="widget" pos="120 80" z-index="10" hidden="1">
+    <quad size="40 10" bgcolor="222" />
+    <label pos="20 -5" text="52341" textprefix="Last: " halign="center" valign="center" textsize="2" textcolor="DDD" />
+  </frame>
+  <script><!--
+#Include "MathLib" as ML
+#Include "TextLib" as TL
+#Include "TimeLib" as TimeLib
+#Include "ColorLib" as CL
+declare CMlFrame widget;
+declare Vec2 HS_BasePosition;
+declare CMlFrame HS_Target;
+declare Boolean HS_Hidden;
+Void hs_hide(Integer duration) {
+  HS_Hidden = True;
+  declare Real x;
+  if (HS_BasePosition[0] < 0.0) {
+    x = (HS_Target.Size[0] * -HS_Target.RelativeScale) - 322.0;
+  } else {
+    x = 322.0;
+  }
+  AnimMgr.Add(HS_Target, "<frame pos='" ^ x ^ " " ^ HS_BasePosition[1] ^ "' />", duration, CAnimManager::EAnimManagerEasing::ExpInOut);
+}
+
+Void hs_show(Integer duration) {
+  HS_Hidden = False;
+  AnimMgr.Add(HS_Target, "<frame pos='" ^ HS_BasePosition[0] ^ " " ^ HS_BasePosition[1] ^ "' />", duration, CAnimManager::EAnimManagerEasing::CircOut);
+}
+
+Void hidescript() {
+  if (HS_Target == Null) {
+    HS_Target <=> (Page.MainFrame.GetFirstChild("widget") as CMlFrame);
+    HS_BasePosition = HS_Target.AbsolutePosition_V3;
+  }
+
+  declare hideSpeed = 10;
+
+  if (InputPlayer == Null) {
+    if (HS_Hidden) {
+      hs_show(600);
+    }
+    return;
+  }
+
+  declare Boolean overHidespeed = ML::Abs(InputPlayer.Speed * 3.6) > hideSpeed;
+
+  if (overHidespeed && !HS_Hidden) {
+    hs_hide(1000);
+
+    while (InputPlayer.Speed * 3.6 > hideSpeed) {
+      yield;
+      hidescript();
+    }
+  }
+
+  if (!overHidespeed && HS_Hidden) {
+    sleep(1000);
+    hs_show(600);
+  }
+}
+main() {
+  widget <=> (Page.MainFrame.GetFirstChild("widget") as CMlFrame);
+
+  sleep(300);
+  widget.Show();
+  while (True) {
+    yield;
+    foreach (Event in PendingEvents) {
+      if (Event.Control == Null) continue;
+    }
+    hidescript();
+  }
+}
+--></script>
+</manialink>
