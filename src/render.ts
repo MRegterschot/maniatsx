@@ -248,7 +248,13 @@ function writeElement(tag: string, props: VNode["props"], st: State): void {
     const parts: string[] = [];
     collectScriptText(props.children as Node, parts);
     const code = parts.join("");
-    if (code.includes("-->")) throw new Error(`<script> content must not contain "-->"`);
+    // The game rejects any "--" inside the comment-wrapped script, not just "-->"
+    const dash = code.split("\n").findIndex((line) => line.includes("--"));
+    if (dash !== -1) {
+      throw new Error(
+        `<script> content must not contain "--" (line ${dash + 1}: ${JSON.stringify(code.split("\n")[dash]!.trim())})`,
+      );
+    }
     push(
       st,
       code === ""

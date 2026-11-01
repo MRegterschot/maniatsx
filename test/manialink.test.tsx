@@ -213,14 +213,14 @@ main() {
     ).toThrow(/Script.Main/);
   });
 
-  test("script content containing --> still throws", () => {
+  test("script content containing -- throws", () => {
     expect(() =>
       render(
         <Manialink id="a">
           <Script.Main>{"x = 1; // -->"}</Script.Main>
         </Manialink>,
       ),
-    ).toThrow(/-->/);
+    ).toThrow(/"--"/);
   });
 });
 

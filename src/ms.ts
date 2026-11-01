@@ -38,9 +38,9 @@ function realText(n: number, where: string): string {
 function intText(n: number, where: string): string {
   if (!Number.isInteger(finite(n, where)))
     throw new RangeError(`${where} expects an integer, got ${n}`);
-  // ManiaScript Integer is 32-bit signed
-  if (n < -2147483648 || n > 2147483647)
-    throw new RangeError(`${where} is outside the 32-bit Integer range: ${n}`);
+  // ManiaScript Integer is 64-bit (wiki.trackmania.io); JS is exact only up to 2^53
+  if (!Number.isSafeInteger(n))
+    throw new RangeError(`${where} is outside the safe Integer range: ${n}`);
   return decimal(n);
 }
 
@@ -51,8 +51,8 @@ function stringText(s: string): string {
     .replace(/\n/g, "\\n")
     .replace(/\r/g, "\\r")
     .replace(/\t/g, "\\t")
-    // "-->" would close the script's XML comment, so split it with a concat
-    .replace(/-->/g, '--" ^ ">');
+    // "--" is an error inside the script's XML comment, so split it with a concat
+    .replace(/-(?=-)/g, '-" ^ "');
   return `"${escaped}"`;
 }
 

@@ -143,11 +143,12 @@ describe("dedent", () => {
 });
 
 describe("lead fixes", () => {
-  test("splits --> inside string literals", () => {
-    expect(ms`${"a-->b"}`.code).toBe('"a--" ^ ">b"');
+  test("splits -- inside string literals", () => {
+    expect(ms`${"a-->b"}`.code).toBe('"a-" ^ "->b"');
+    expect(ms`${"---"}`.code).toBe('"-" ^ "-" ^ "-"');
   });
-  test("rejects integers outside the 32-bit range", () => {
-    expect(() => ms`${2 ** 31}`).toThrow(/32-bit/);
-    expect(ms`${-(2 ** 31)}`.code).toBe("-2147483648");
+  test("accepts 64-bit-ish integers but rejects unsafe ones", () => {
+    expect(ms`${2 ** 31}`.code).toBe("2147483648");
+    expect(() => ms`${2 ** 53}`).toThrow(/safe Integer/);
   });
 });

@@ -106,10 +106,10 @@ The output is the last child of `<manialink>`, in an XML comment: includes, glob
 | `ms.vec2(1, 2)` | `<1., 2.>`                     |
 | `[1, 2]`        | `[1, 2]` (non-empty, one type) |
 
-- JS cannot tell `Integer` from `Real`, so use `ms.real` where ManiaScript needs a Real. Integers outside the 32-bit range throw; use `ms.real` for large whole numbers.
+- JS cannot tell `Integer` from `Real`, so use `ms.real` where ManiaScript needs a Real. Integers beyond `Number.MAX_SAFE_INTEGER` throw (ManiaScript Integer is 64-bit, JS loses precision above 2^53).
 - `null`, `undefined`, objects, and empty or mixed arrays throw. Nested `ms` code is inserted as is.
 - `ms.raw(text)` inserts text verbatim. Trusted only.
-- Strings escape `\`, `"`, newlines and tabs. `-->` is split (`"a--" ^ ">b"`) so it cannot close the script's XML comment.
+- Strings escape `\`, `"`, newlines and tabs. Any `--` is split (`"a-" ^ "-b"`): the game rejects `--` anywhere inside the comment-wrapped script. For the same reason a raw script line containing `--` (e.g. `// ----`) throws at render time.
 
 ## Raw XML and player text
 

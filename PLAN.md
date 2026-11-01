@@ -58,7 +58,7 @@ const xml = render(
    - `class`: `string | string[]`, arrays joined with a space, empties dropped.
    - Strings are XML-escaped (`& < > " '`, and `\n` → `&#10;` so multi-line text survives).
    - `data-*` attributes are allowed on every element (TS allows undeclared hyphenated JSX attributes).
-6. **Children rules**: container elements (`manialink`, `frame`, `framemodel`, `dico`, `language`, …) take element children. Leaf elements take none. `script` takes text (`string` or `MsCode`), emitted inside `<!-- … -->`; content containing `-->` throws. Text children anywhere else throw at render time (and are a type error where possible).
+6. **Children rules**: container elements (`manialink`, `frame`, `framemodel`, `dico`, `language`, …) take element children. Leaf elements take none. `script` takes text (`string` or `MsCode`), emitted inside `<!-- … -->`; content containing `--` anywhere throws (the game rejects it, per wiki.trackmania.io). Text children anywhere else throw at render time (and are a type error where possible).
 7. **Components and context**: `createContext(default)` returns `{ Provider, id }`; `useContext(ctx)` works inside components during a render (synchronous render stack). `render(node, { contexts })` can also seed values.
 8. **`<Manialink>` component**: emits optional XML prolog (`prolog: true` default), `<manialink version="3" id name layer?>`, its children, and the assembled script.
 9. **Script composition** (`Script.*` components). These render no XML; they register parts with the nearest `<Manialink>`:

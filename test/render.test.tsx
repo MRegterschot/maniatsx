@@ -182,9 +182,10 @@ describe("script", () => {
     );
   });
 
-  test("rejects --> in content", () => {
-    expect(() => render(jsx("script", { children: "a --> b" }))).toThrow(/-->/);
-    expect(() => render(jsx("script", { children: ms("x-->y") }))).toThrow(/-->/);
+  test("rejects -- anywhere in content", () => {
+    expect(() => render(jsx("script", { children: "a --> b" }))).toThrow(/"--"/);
+    expect(() => render(jsx("script", { children: ms("x-->y") }))).toThrow(/"--"/);
+    expect(() => render(jsx("script", { children: "ok;\n// ---- section" }))).toThrow(/line 2/);
   });
 
   test("rejects elements inside script", () => {
