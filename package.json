@@ -42,6 +42,7 @@
     "@maniascript/api": "^10.0.0",
     "@maniascript/parser": "^16.0.0",
     "@types/bun": "^1.4.4",
+    "antlr4ng": "^3.0.16",
     "fast-xml-parser": "^5.11.2",
     "prettier": "^3.9.10",
     "typescript": "^7.0.2",
