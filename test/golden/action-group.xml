@@ -29,6 +29,7 @@
 #Include "TimeLib" as TimeLib
 #Include "ColorLib" as CL
 declare CMlFrame widget;
+Void Mtx_Noop() {}
 main() {
   widget <=> (Page.MainFrame.GetFirstChild("widget") as CMlFrame);
 

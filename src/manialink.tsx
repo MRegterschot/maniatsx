@@ -202,6 +202,9 @@ function assemble(scope: ScriptScope, manialinkId: string): string | null {
   const lines: string[] = [];
   for (const [lib, alias] of scope.includes) lines.push(`#Include "${lib}" as ${alias}`);
   lines.push(...indentBlock(structs, 0), ...indentBlock(globals, 0), ...indentBlock(functions, 0));
+  // The game's parser rejects `main()` directly after global declarations ("unexpected main"); a function in between fixes it
+  if (functions.length === 0 && (globals.length > 0 || structs.length > 0))
+    lines.push("Void Mtx_Noop() {}");
   lines.push(
     "main() {",
     ...indentBlock(stateInit, 2),

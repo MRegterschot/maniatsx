@@ -451,3 +451,24 @@ describe("duplicate id warnings", () => {
     expect(w.list).toEqual(['Duplicate id "close" on <quad>']);
   });
 });
+
+describe("game parser quirks", () => {
+  // In game, `main()` right after global declarations fails with "syntax error, unexpected `main`"
+  test("a function always separates globals from main()", () => {
+    const xml = render(
+      <Manialink id="q" prolog={false}>
+        <Script.Globals>{"declare Integer G_A;"}</Script.Globals>
+      </Manialink>,
+    );
+    expect(xml).toContain("declare Integer G_A;\nVoid Mtx_Noop() {}\nmain() {");
+  });
+  test("no filler when a real function already sits between them", () => {
+    const xml = render(
+      <Manialink id="q" prolog={false}>
+        <Script.Globals>{"declare Integer G_A;"}</Script.Globals>
+        <Script.Functions>{"Void F() {}"}</Script.Functions>
+      </Manialink>,
+    );
+    expect(xml).not.toContain("Mtx_Noop");
+  });
+});
