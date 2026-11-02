@@ -1852,11 +1852,24 @@ export class Lowerer {
     if (global === "Object" && name === "keys" && node.arguments.length === 1) {
       const rec = this.val(node.arguments[0]!);
       if (typeof rec.ty === "object" && "record" in rec.ty) {
-        return {
-          items: [...operand(rec, ATOM, false), ".keys"],
-          ty: { array: rec.ty.record.key },
-          prec: ATOM,
-        };
+        // doc.h has no `.keys`, so collect them with a foreach into a temp
+        if (!this.out || this.lazy > 0) {
+          return this.bad(
+            node,
+            "keys",
+            "`Object.keys` in a binding or on the right of && or ||",
+            "Assign it to a local first.",
+          );
+        }
+        const out = this.out;
+        const ty: Ty = { array: rec.ty.record.key };
+        const t = this.tmpName();
+        this.declared++;
+        out.line(`declare ${msName(ty)} ${t};`);
+        out.line("foreach (", `${t}_K => ${t}_V in `, rec.items, ") {");
+        out.line(`  ${t}.add(${t}_K);`);
+        out.line("}");
+        return atom(t, ty);
       }
       return this.bad(node, "keys", "`Object.keys` on a non-record value");
     }

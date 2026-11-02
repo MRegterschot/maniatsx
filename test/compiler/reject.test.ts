@@ -39,6 +39,19 @@ const cases: [string, string, string, RegExp][] = [
   ["delete", "delete a.b;", "delete a.b", /delete/i],
   ["typeof", "const x = typeof a;", "typeof a", /typeof/i],
   ["instanceof", "const x = a instanceof Date;", "a instanceof Date", /instanceof/i],
+  ["Math without a MathLib equivalent", "const x = Math.cbrt(2);", "Math.cbrt(2)", /Math\.cbrt/],
+  [
+    "unsupported array method",
+    "const a: Integer[] = []; const b = a.map(1);",
+    "a.map(1)",
+    /array method `\.map`/i,
+  ],
+  [
+    "splice with a count other than 1",
+    "const a: Integer[] = []; a.splice(0, 2);",
+    "a.splice(0, 2)",
+    /array method `\.splice`/i,
+  ],
   ["union type", "let x: Integer | Text;", "Integer | Text", /union type/i],
 ];
 for (const [name, body, marker, message] of cases) {

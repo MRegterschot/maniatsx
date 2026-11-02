@@ -10,16 +10,20 @@ const cases = Array.from(new Glob("*.tsx").scanSync(fixtures))
   .map((f) => f.replace(/\.tsx$/, ""))
   .sort();
 
+const withHeader = (s: { header: string }, body: string) =>
+  s.header ? `${s.header}\n\n${body}` : body;
+
 for (const name of cases) {
   test(`golden: ${name}`, async () => {
     const file = `${fixtures}/${name}.tsx`;
     const { snippets, diagnostics } = compileSnippets(file, await Bun.file(file).text());
     expect(diagnostics).toEqual([]);
     expect(snippets.length).toBeGreaterThan(0);
-    const output = snippets.map((s) => s.ms.trimEnd()).join("\n\n") + "\n";
+    const output = snippets.map((s) => withHeader(s, s.ms.trimEnd())).join("\n\n") + "\n";
     // Function definitions are top level; statements need a main() around them
     for (const s of snippets) {
-      const script = s.kind === "fn" ? `${s.ms}\nmain() {}` : `main() {\n${s.ms}\n}`;
+      const body = s.kind === "fn" ? `${s.ms}\nmain() {}` : `main() {\n${s.ms}\n}`;
+      const script = withHeader(s, body);
       expect(parseManiaScript(script).errors).toEqual([]);
     }
     const target = `${goldens}/${name}.ms`;

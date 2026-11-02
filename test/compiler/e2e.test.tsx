@@ -59,3 +59,33 @@ test("compiled lifecycle and hidden binding render valid script", async () => {
     await rm(target, { force: true });
   }
 });
+
+test("ternary, array methods, TextLib and structs render a valid script", async () => {
+  const file = "test/compiler/fixtures/combined.tsx";
+  const result = compileSource(file, await Bun.file(file).text());
+  expect(result.diagnostics).toEqual([]);
+  const target = "test/compiler/.tmp/combined.tsx";
+  await mkdir("test/compiler/.tmp", { recursive: true });
+  try {
+    await Bun.write(target, result.code);
+    const { Combined } = await import(`./.tmp/${"combined"}.tsx`);
+    const script = extractScripts(
+      render(
+        <Manialink id="combined">
+          <Combined />
+        </Manialink>,
+      ),
+    )[0]!;
+    expect(script.match(/#Include "TextLib" as TextLib/g)).toHaveLength(1);
+    expect(script.match(/#Struct K_Entry/g)).toHaveLength(1);
+    expect(script).toContain('K_Entry { name = "bob", score = 9 }');
+    expect(script).toContain(".add(");
+    expect(script).toContain(".exists(");
+    expect(script).toContain(".count");
+    expect(script).toContain("TextLib::ToUpperCase(");
+    expect(script).toMatch(/if \(entries\.count > 1\) \{/);
+    expect(parseManiaScript(script).errors).toEqual([]);
+  } finally {
+    await rm(target, { force: true });
+  }
+});
