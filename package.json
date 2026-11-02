@@ -47,11 +47,13 @@
     "build": "rm -rf dist && tsc -p tsconfig.build.json",
     "bench": "bun bench/render.bench.tsx",
     "format": "prettier --write src test scripts examples bench",
-    "render": "bun src/cli.ts",
+    "render": "bun --preload ./scripts/preload-compiler.ts src/cli.ts",
     "gen:maniascript": "bun scripts/gen-maniascript-api.ts",
-    "compile": "bun bin/maniatsx-compile.ts"
+    "compile": "bun bin/maniatsx-compile.ts",
+    "send": "bun scripts/send-manialink.ts"
   },
   "devDependencies": {
+    "@evotm/gbxclient": "^1.5.0",
     "@maniascript/api": "^10.0.0",
     "@maniascript/parser": "^16.0.0",
     "@types/bun": "^1.4.4",

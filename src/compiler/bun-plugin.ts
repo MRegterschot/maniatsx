@@ -11,14 +11,17 @@ export function maniatsxPlugin(opts: { rootDir?: string; tsconfigPath?: string }
     name: "maniatsx",
     setup(build) {
       build.onLoad({ filter: /\.[cm]?tsx?$/ }, async ({ path: file }) => {
-        if (file.split(/[\\/]/).includes("node_modules") || !/\.tsx?$/.test(file)) return;
         const source = await Bun.file(file).text();
+        const loader = file.endsWith("x") ? ("tsx" as const) : ("ts" as const);
+        // Runtime plugins (Bun.plugin) must always return contents, so untouched files pass through as-is
+        const untouched = { contents: source, loader };
+        if (file.split(/[\\/]/).includes("node_modules") || !/\.tsx?$/.test(file)) return untouched;
         if (
           !ts
             .preProcessFile(source)
             .importedFiles.some((item) => item.fileName === "maniatsx/client")
         )
-          return;
+          return untouched;
         const result = compileSource(file, source, { rootDir });
         const format = (d: (typeof result.diagnostics)[number]) =>
           `${d.file}:${d.line}:${d.column} ${d.message}`;
@@ -26,7 +29,7 @@ export function maniatsxPlugin(opts: { rootDir?: string; tsconfigPath?: string }
           console.warn(format(warning));
         const errors = result.diagnostics.filter((d) => d.severity === "error");
         if (errors.length) throw new Error(errors.map(format).join("\n"));
-        return { contents: result.code, loader: file.endsWith(".tsx") ? "tsx" : "ts" };
+        return { contents: result.code, loader };
       });
     },
   };
