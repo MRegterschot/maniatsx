@@ -9,7 +9,13 @@ import {
   type ClientState,
 } from "./contract.ts";
 
+import type { CMlScriptIngame } from "../maniascript/api.generated.ts";
+import { clientOnly } from "../maniascript/client-only.ts";
+
 export type { Integer, Real, Text, Ident, Vec2, Vec3, Int2, Int3 } from "../maniascript/types.ts";
+
+// The manialink script context: `ml.Page`, `ml.LocalUser`, `ml.Now`… compile to `Page`, `LocalUser`, `Now`
+export const ml = clientOnly<CMlScriptIngame>("ml");
 
 function notCompiled(api: string): never {
   throw new Error(
