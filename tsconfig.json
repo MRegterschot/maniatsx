@@ -18,7 +18,9 @@
     "paths": {
       "maniatsx": ["./src/index.ts"],
       "maniatsx/jsx-runtime": ["./src/jsx-runtime.ts"],
-      "maniatsx/jsx-dev-runtime": ["./src/jsx-dev-runtime.ts"]
+      "maniatsx/jsx-dev-runtime": ["./src/jsx-dev-runtime.ts"],
+      "maniatsx/client": ["./src/client/index.ts"],
+      "maniatsx/maniascript": ["./src/maniascript/index.ts"]
     }
   },
   "include": ["src", "test", "scripts", "examples", "bench"]

@@ -1,3 +1,4 @@
+import { CLIENT_SCOPE, isClient, type ClientScope } from "./client/runtime.ts";
 import { contextRuntime, providers, type Context, type ContextEntry } from "./context.ts";
 import { escapeAttribute, escapeText, formatNumber, serializeValue } from "./serialize.ts";
 import { Fragment, MS_CODE, RAW_XML, VNODE, type Node, type VNode } from "./vnode.ts";
@@ -246,6 +247,15 @@ function collectScriptText(node: Node, out: string[]): void {
 
 function writeElement(tag: string, props: VNode["props"], st: State): void {
   if (!NAME.test(tag)) throw new Error(`Invalid element name "${tag}"`);
+  if (Object.values(props).some(isClient)) {
+    const client = useRenderScope<{ client: ClientScope }>(CLIENT_SCOPE)?.client;
+    if (!client) throw new Error(`<${tag}> client handles can only be used inside <Manialink>`);
+    props = client.element(tag, props);
+  }
+  for (const name of ["onClick", "onRightClick", "onMouseOver", "onMouseOut", "onSubmit"]) {
+    if (props[name] != null)
+      throw new Error(`<${tag}> attribute "${name}" requires a ClientHandler`);
+  }
   const indent = st.pretty ? "  ".repeat(st.depth) : "";
   const nl = st.pretty ? "\n" : "";
   const open = `<${tag}${writeAttributes(tag, props, st)}`;

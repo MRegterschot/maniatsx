@@ -55,7 +55,7 @@ Client closures (`client.handler`, `client.bind`, `client.onInit`, `client.onFra
 | `Integer`, `Real` | `Integer`, `Real` aliases of `number` (D2) |
 | `Boolean`, `Text`, `Void` | `boolean`, `string`, `void` |
 | `Vec2`, `Vec3`, `Int2`, `Int3` | readonly interfaces `{ X; Y; (Z) }` + constructors `vec2(x, y)` … → `<x, y>` |
-| `Ident` | branded `Ident`; `NullId` constant |
+| `Ident` | branded `Ident`; `NullId` constant. Idents are client-side handles, so server values can't be captured as Ident: capture Text and look it up on the client |
 | `Array<T>` / `T[]` | `T[]`; associative `T[K]` → `Record<K, T>` (string/Integer/Ident keys) |
 | `class CMlLabel : public CMlControl` | `interface CMlLabel extends CMlControl` (class objects are references; nullable as `T \| null` → `Null`) |
 | `enum` inside a class | `CMlScriptEvent.Type.MouseClick` (a namespace + const object), emitted as `CMlScriptEvent::Type::MouseClick` |

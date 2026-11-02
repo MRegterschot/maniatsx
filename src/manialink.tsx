@@ -1,3 +1,4 @@
+import { ClientScope } from "./client/runtime.ts";
 import { dedent, ms } from "./ms.ts";
 import { raw } from "./raw.ts";
 import { renderChildren, useRenderScope } from "./render.ts";
@@ -10,7 +11,7 @@ const SCOPE_KEY = Symbol.for("maniatsx.manialink");
 const LIB = /^[\w./-]+$/;
 const ALIAS = /^[A-Za-z_]\w*$/;
 
-type Slot = "globals" | "functions" | "main" | "events" | "loop";
+type Slot = "structs" | "globals" | "functions" | "stateInit" | "main" | "events" | "loop";
 
 /** Script source: a string, `ms` code, or arrays of those. Nullish and `false` are skipped. */
 export type ScriptCode = string | MsCode | false | null | undefined | readonly ScriptCode[];
@@ -45,6 +46,7 @@ interface Part {
 }
 
 interface ScriptScope {
+  client: ClientScope;
   includes: Map<string, string>;
   slots: Record<Slot, Part[]>;
   rawScript: boolean;
@@ -52,14 +54,34 @@ interface ScriptScope {
 }
 
 function createScope(): ScriptScope {
-  return {
+  const scope: ScriptScope = {
+    client: undefined as unknown as ClientScope,
     includes: new Map(),
-    slots: { globals: [], functions: [], main: [], events: [], loop: [] },
+    slots: {
+      structs: [],
+      globals: [],
+      functions: [],
+      stateInit: [],
+      main: [],
+      events: [],
+      loop: [],
+    },
     rawScript: false,
     onRawScript() {
       this.rawScript = true;
     },
   };
+  scope.client = new ClientScope({
+    part(slot, code, id) {
+      const parts = scope.slots[slot];
+      if (id !== undefined && parts.some((part) => part.id === id)) return;
+      parts.push({ id, code });
+    },
+    include(lib, alias) {
+      addInclude(scope, lib, alias);
+    },
+  });
+  return scope;
 }
 
 function requireScope(name: string): ScriptScope {
@@ -98,8 +120,11 @@ function makePart(slot: Slot, name: string) {
 }
 
 function Include(props: ScriptIncludeProps): Node {
-  const scope = requireScope("Script.Include");
-  const { lib, as: alias } = props;
+  addInclude(requireScope("Script.Include"), props.lib, props.as);
+  return null;
+}
+
+function addInclude(scope: ScriptScope, lib: string, alias: string): void {
   if (typeof lib !== "string" || !LIB.test(lib)) {
     throw new Error(`<Script.Include> invalid lib ${JSON.stringify(lib)}`);
   }
@@ -113,7 +138,7 @@ function Include(props: ScriptIncludeProps): Node {
         `<Script.Include> lib "${lib}" is already included as "${existing}", not "${alias}"`,
       );
     }
-    return null;
+    return;
   }
   for (const [otherLib, otherAlias] of scope.includes) {
     if (otherAlias === alias) {
@@ -123,7 +148,6 @@ function Include(props: ScriptIncludeProps): Node {
     }
   }
   scope.includes.set(lib, alias);
-  return null;
 }
 
 /** Script parts register into the nearest `<Manialink>`; they render no XML. */
@@ -144,11 +168,13 @@ function indentBlock(parts: Part[], spaces: number): string[] {
 }
 
 function assemble(scope: ScriptScope, manialinkId: string): string | null {
-  const { globals, functions, main, events, loop } = scope.slots;
+  const { structs, globals, functions, stateInit, main, events, loop } = scope.slots;
   const count =
     scope.includes.size +
+    structs.length +
     globals.length +
     functions.length +
+    stateInit.length +
     main.length +
     events.length +
     loop.length;
@@ -160,8 +186,14 @@ function assemble(scope: ScriptScope, manialinkId: string): string | null {
   }
   const lines: string[] = [];
   for (const [lib, alias] of scope.includes) lines.push(`#Include "${lib}" as ${alias}`);
-  lines.push(...indentBlock(globals, 0), ...indentBlock(functions, 0));
-  lines.push("main() {", ...indentBlock(main, 2), "  while (True) {", "    yield;");
+  lines.push(...indentBlock(structs, 0), ...indentBlock(globals, 0), ...indentBlock(functions, 0));
+  lines.push(
+    "main() {",
+    ...indentBlock(stateInit, 2),
+    ...indentBlock(main, 2),
+    "  while (True) {",
+    "    yield;",
+  );
   if (events.length > 0) {
     lines.push("    foreach (Event in PendingEvents) {", ...indentBlock(events, 6), "    }");
   }
@@ -172,6 +204,7 @@ function assemble(scope: ScriptScope, manialinkId: string): string | null {
 function ManialinkBody(props: { manialinkId: string; children?: Node }): Node {
   const scope = createScope();
   const xml = renderChildren(props.children, { key: SCOPE_KEY, value: scope });
+  scope.client.finish();
   const script = assemble(scope, props.manialinkId);
   return [raw(xml), script === null ? null : jsx("script", { children: ms.raw(script) })];
 }

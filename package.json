@@ -23,6 +23,14 @@
     "./jsx-dev-runtime": {
       "types": "./dist/jsx-dev-runtime.d.ts",
       "default": "./dist/jsx-dev-runtime.js"
+    },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "default": "./dist/client/index.js"
+    },
+    "./maniascript": {
+      "types": "./dist/maniascript/index.d.ts",
+      "default": "./dist/maniascript/index.js"
     }
   },
   "engines": {
