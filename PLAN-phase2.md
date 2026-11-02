@@ -96,6 +96,13 @@ The API typings are generated from the TM2020 `doc.h` published in bigbang1112/m
 - **Lifecycle:** `client.onInit` → main slot; `client.onFrame` → loop slot (runs every frame, so the docs warn about cost).
 - Everything goes through the phase 1 `Script.*` slots, so hand-written `ms` parts and compiled parts can coexist in one page.
 
+### Mappings corrected against doc.h (2026-11-02)
+
+- `Object.keys(rec)` has no ManiaScript equivalent (`.keys` doesn't exist): it lowers to a temp array filled by `foreach (K => V in Rec)`, so it's rejected where a statement can't be inserted (bindings, right side of `&&`/`||`).
+- `splice(i, 1)` → `.removekey(i)`: doc.h only lists `removekey` on associative arrays, the wiki uses it on lists. Verify in game (P2-7).
+- `Math.floor/round/ceil` → `MathLib::FloorInteger/NearestInteger/CeilingInteger` (they return Integer; `NearestInteger` may round negative halves differently from JS). Math functions missing from doc.h are rejected.
+- Class-typed declarations and assignments use `<=>`, including `X <=> Null`.
+
 ## Requirements
 
 1. The compiler rejects everything outside D4 with a source-mapped error (file:line:col, node text, suggestion).
@@ -109,12 +116,12 @@ The API typings are generated from the TM2020 `doc.h` published in bigbang1112/m
 
 | # | Work | Suggested owner |
 |---|---|---|
-| P2-0 | Offline ManiaScript syntax check (`@maniascript/parser`) for phase 1 goldens and `Script.*` output | Codex |
-| P2-1 | Generate API typings from `doc.h` (D3), committed under `src/maniascript/` | Codex |
-| P2-2 | Compiler core: TS 6 program, client-closure discovery, capture/hole analysis, D2 number typing | Sonnet + lead review |
-| P2-3 | Lowering of the D4 subset + golden tests | Sonnet / Codex |
-| P2-4 | Runtime: `client.state/bind/handler/onInit/onFrame/fn`, `action`, auto ids, dirty loop (D5) | Sonnet |
-| P2-5 | Bun plugin + `maniatsx compile` + "not compiled" errors | Codex |
+| P2-0 ✅ | Offline ManiaScript syntax check (`@maniascript/parser`) for phase 1 goldens and `Script.*` output | Codex |
+| P2-1 ✅ | Generate API typings from `doc.h` (D3), committed under `src/maniascript/` | Codex |
+| P2-2 ✅ | Compiler core: TS 6 program, client-closure discovery, capture/hole analysis, D2 number typing | Sonnet + lead review |
+| P2-3 ✅ | Lowering of the D4 subset + golden tests | Sonnet / Codex |
+| P2-4 ✅ | Runtime: `client.state/bind/handler/onInit/onFrame/fn`, `action`, auto ids, dirty loop (D5) | Sonnet |
+| P2-5 ✅ | Bun plugin + `maniatsx compile` + "not compiled" errors | Codex |
 | P2-6 | Port one real widget (the gocontrolpanel action group toggle) to client TS; compare with the hand-written script | lead |
 | P2-7 | In-game verification of all goldens (needs the game) | user + lead |
 
