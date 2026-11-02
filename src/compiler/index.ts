@@ -60,6 +60,26 @@ function transform(program: ts.Program, files: readonly ts.SourceFile[], root: s
           } else if (arg) {
             const closure = unparen(arg);
             if (ts.isArrowFunction(closure) || ts.isFunctionExpression(closure)) {
+              if (closure.modifiers?.some((m) => m.kind === ts.SyntaxKind.AsyncKeyword))
+                analyzer.report(
+                  closure,
+                  "async",
+                  "Async functions are not supported in client code.",
+                );
+              if (closure.asteriskToken)
+                analyzer.report(
+                  closure,
+                  "generator",
+                  "Generators are not supported in client code.",
+                );
+              for (const param of closure.parameters) {
+                if (param.dotDotDotToken)
+                  analyzer.report(
+                    param.dotDotDotToken,
+                    "rest",
+                    "Rest parameters are not supported in client code.",
+                  );
+              }
               const decl = node.parent;
               const sig =
                 kind === "fn" && ts.isVariableDeclaration(decl)
@@ -123,28 +143,44 @@ export function compileSource(
 ) {
   const root = path.resolve(opts.rootDir ?? process.cwd());
   const name = path.resolve(root, fileName);
-  const options: ts.CompilerOptions = {
-    target: ts.ScriptTarget.ES2022,
-    module: ts.ModuleKind.NodeNext,
-    moduleResolution: ts.ModuleResolutionKind.NodeNext,
-    jsx: ts.JsxEmit.ReactJSX,
-    jsxImportSource: "maniatsx",
-    baseUrl: root,
-    paths: {
-      "maniatsx/client": ["src/client/index.ts"],
-      "maniatsx/maniascript": ["src/maniascript/index.ts"],
-      "maniatsx/jsx-runtime": ["src/jsx-runtime.ts"],
-    },
-    skipLibCheck: true,
-  };
-  const host = ts.createCompilerHost(options);
-  const read = host.readFile.bind(host),
-    exists = host.fileExists.bind(host);
-  host.readFile = (f) => (path.resolve(f) === name ? sourceText : read(f));
-  host.fileExists = (f) => path.resolve(f) === name || exists(f);
-  const program = ts.createProgram([name], options, host);
-  const result = transform(program, [program.getSourceFile(name)!], root);
-  return { code: result.output.get(name)!, diagnostics: result.diagnostics };
+  try {
+    const options: ts.CompilerOptions = {
+      target: ts.ScriptTarget.ES2022,
+      module: ts.ModuleKind.NodeNext,
+      moduleResolution: ts.ModuleResolutionKind.NodeNext,
+      jsx: ts.JsxEmit.ReactJSX,
+      jsxImportSource: "maniatsx",
+      baseUrl: root,
+      paths: {
+        "maniatsx/client": ["src/client/index.ts"],
+        "maniatsx/maniascript": ["src/maniascript/index.ts"],
+        "maniatsx/jsx-runtime": ["src/jsx-runtime.ts"],
+      },
+      skipLibCheck: true,
+    };
+    const host = ts.createCompilerHost(options);
+    const read = host.readFile.bind(host),
+      exists = host.fileExists.bind(host);
+    host.readFile = (f) => (path.resolve(f) === name ? sourceText : read(f));
+    host.fileExists = (f) => path.resolve(f) === name || exists(f);
+    const program = ts.createProgram([name], options, host);
+    const result = transform(program, [program.getSourceFile(name)!], root);
+    return { code: result.output.get(name)!, diagnostics: result.diagnostics };
+  } catch (error) {
+    return {
+      code: sourceText,
+      diagnostics: [
+        {
+          file: name,
+          line: 1,
+          column: 1,
+          code: "internal-error",
+          severity: "error" as const,
+          message: `Internal compiler error: ${error instanceof Error ? error.message : String(error)}`,
+        },
+      ],
+    };
+  }
 }
 
 export function compileProject({ tsconfigPath }: { tsconfigPath: string }) {

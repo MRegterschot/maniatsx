@@ -208,7 +208,11 @@ export class Analyzer {
     if (decl && (name === "Array" || name === "ReadonlyArray") && !inLibrary(decl)) {
       return { array: this.tyFromTypeNode(args?.[0], at) };
     }
-    if (decl && name === "Record" && decl.getSourceFile().hasNoDefaultLib) {
+    if (
+      decl &&
+      name === "Record" &&
+      this.program.isSourceFileDefaultLibrary(decl.getSourceFile())
+    ) {
       const key = this.tyFromTypeNode(args?.[0], at);
       if (key !== "Text" && key !== "Integer" && key !== "Ident") {
         return this.fail(node, "record-key", "Record keys must be Text, Integer or Ident.");

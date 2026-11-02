@@ -957,7 +957,7 @@ export class Lowerer {
         return this.bad(
           node,
           "new",
-          "`new`",
+          `\`new ${(node as ts.NewExpression).expression.getText()}\``,
           "Use an object literal for structs, or an array literal.",
         );
       case ts.SyntaxKind.RegularExpressionLiteral:
@@ -1477,8 +1477,8 @@ export class Lowerer {
   private arrayLiteral(node: ts.ArrayLiteralExpression, expected?: Ty): E {
     const elemExpected =
       expected && typeof expected === "object" && "array" in expected ? expected.array : undefined;
-    if (node.elements.some(ts.isSpreadElement))
-      return this.bad(node, "spread", "Spread in an array literal");
+    const spread = node.elements.find(ts.isSpreadElement);
+    if (spread) return this.bad(spread, "spread", "Spread in an array literal");
     if (node.elements.length === 0) {
       if (!elemExpected)
         return this.bad(
@@ -1593,6 +1593,16 @@ export class Lowerer {
     const callee = unparen(node.expression);
     if (ts.isPropertyAccessExpression(callee)) return this.methodCall(node, callee);
     if (ts.isIdentifier(callee)) {
+      const symbol = this.checker.getSymbolAtLocation(callee);
+      const declaration = symbol?.declarations?.[0];
+      let owner: ts.Node | undefined = declaration;
+      while (owner && !ts.isImportDeclaration(owner)) owner = owner.parent;
+      if (
+        owner &&
+        ts.isStringLiteral(owner.moduleSpecifier) &&
+        !["maniatsx/client", "maniatsx/maniascript"].includes(owner.moduleSpecifier.text)
+      )
+        return this.bad(node, "import", `Calling an import from ${owner.moduleSpecifier.text}`);
       const k = this.a.classify(callee, this.closure);
       if (k.k === "vecCtor") return this.vecCtor(node, k.name);
       if (k.k === "fn") return this.fnCall(node, callee.text, k.ty);
