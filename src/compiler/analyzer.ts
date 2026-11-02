@@ -227,7 +227,7 @@ export class Analyzer {
       if (name === "Array" || name === "ReadonlyArray") {
         return { array: this.tyFromTypeNode(args?.[0], at) };
       }
-      if (decl.getSourceFile().hasNoDefaultLib) {
+      if (this.program.isSourceFileDefaultLibrary(decl.getSourceFile())) {
         if (name === "Record") return this.fail(node, "record-key", "Unsupported Record type.");
         return this.fail(
           node,
@@ -306,7 +306,7 @@ export class Analyzer {
       sym &&
       decl &&
       sym.name !== "__type" &&
-      !decl.getSourceFile().hasNoDefaultLib &&
+      !this.program.isSourceFileDefaultLibrary(decl.getSourceFile()) &&
       (ts.isInterfaceDeclaration(decl) || ts.isTypeAliasDeclaration(decl))
     ) {
       return { struct: this.useStruct(sym, at) };

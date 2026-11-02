@@ -429,7 +429,9 @@ export class Lowerer {
     }
     const sym = this.checker.getSymbolAtLocation(d.name);
     const name = this.declareLocal(sym, d.name.text, ty);
-    this.out!.line("declare ", msName(ty), " ", name, init ? [" = ", ...init.items] : [], ";");
+    // Class values are references: ManiaScript assigns them with <=>
+    const eq = isClass(ty) ? " <=> " : " = ";
+    this.out!.line("declare ", msName(ty), " ", name, init ? [eq, ...init.items] : [], ";");
   }
 
   private exprStmt(expr: ts.Expression) {
@@ -506,7 +508,7 @@ export class Lowerer {
       if (R.ty === "Num") R = this.val(e.right, L.ty);
       if (isNum(L.ty) && isNum(R.ty) && L.ty !== R.ty) this.mixed(e, L.ty, R.ty);
     }
-    const text = op === "+=" && L.ty === "Text" ? "^=" : op;
+    const text = op === "+=" && L.ty === "Text" ? "^=" : op === "=" && isClass(L.ty) ? "<=>" : op;
     out.line(L.items, " ", text, " ", R.items, ";");
     if (this.stateRooted(target)) out.line(`${DIRTY_FLAG} = True;`);
   }
@@ -1217,7 +1219,7 @@ export class Lowerer {
         node,
         "member",
         `\`${this.snippet(node)}\``,
-        ts.isMethodSignature(decl!) ? "Call it instead of reading it." : "Unknown member.",
+        decl && ts.isMethodSignature(decl) ? "Call it instead of reading it." : "Unknown member.",
       );
     }
     const ty = this.a.declTy(sym, node);
@@ -1449,10 +1451,11 @@ export class Lowerer {
     out.line(`declare ${msName(ty)} ${t};`);
     out.line("if (", c, ") {");
     out.items.push(...ra.items);
-    out.line("  ", t, " = ", ra.result.items, ";");
+    const eq = isClass(ty) ? " <=> " : " = ";
+    out.line("  ", t, eq, ra.result.items, ";");
     out.line("} else {");
     out.items.push(...rb.items);
-    out.line("  ", t, " = ", rb.result.items, ";");
+    out.line("  ", t, eq, rb.result.items, ";");
     out.line("}");
     return atom(t, ty);
   }
