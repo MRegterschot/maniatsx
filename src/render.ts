@@ -1,4 +1,3 @@
-import { CLIENT_SCOPE, isClient, type ClientScope } from "./client/runtime.ts";
 import { contextRuntime, providers, type Context, type ContextEntry } from "./context.ts";
 import { escapeAttribute, escapeText, formatNumber, serializeValue } from "./serialize.ts";
 import { Fragment, MS_CODE, RAW_XML, VNODE, type Node, type VNode } from "./vnode.ts";
@@ -28,6 +27,20 @@ interface State {
   scopes: Scope[];
   ids: Set<string>;
   warn: (message: string) => void;
+}
+
+// Phase 2 hooks, matched by registry symbols so phase 1 doesn't import the client runtime
+const CLIENT_HANDLE = Symbol.for("maniatsx.client");
+const MANIALINK_SCOPE = Symbol.for("maniatsx.manialink");
+interface ClientElementHook {
+  element(tag: string, props: Record<string, unknown>): Record<string, unknown>;
+}
+function isClientHandle(value: unknown): boolean {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as { $$typeof?: symbol }).$$typeof === CLIENT_HANDLE
+  );
 }
 
 const NAME = /^[A-Za-z_][\w.:-]*$/;
@@ -247,9 +260,12 @@ function collectScriptText(node: Node, out: string[]): void {
 
 function writeElement(tag: string, props: VNode["props"], st: State): void {
   if (!NAME.test(tag)) throw new Error(`Invalid element name "${tag}"`);
-  if (Object.values(props).some(isClient)) {
-    const client = useRenderScope<{ client: ClientScope }>(CLIENT_SCOPE)?.client;
-    if (!client) throw new Error(`<${tag}> client handles can only be used inside <Manialink>`);
+  if (Object.values(props).some(isClientHandle)) {
+    const scope = useRenderScope<{ client?: ClientElementHook }>(MANIALINK_SCOPE);
+    if (!scope) throw new Error(`<${tag}> client handles can only be used inside <Manialink>`);
+    const client = scope.client;
+    if (!client)
+      throw new Error(`<${tag}> client handles need the runtime: import "maniatsx/client"`);
     props = client.element(tag, props);
   }
   for (const name of ["onClick", "onRightClick", "onMouseOver", "onMouseOut", "onSubmit"]) {

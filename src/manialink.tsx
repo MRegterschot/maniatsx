@@ -1,4 +1,3 @@
-import { ClientScope } from "./client/runtime.ts";
 import { dedent, ms } from "./ms.ts";
 import { raw } from "./raw.ts";
 import { renderChildren, useRenderScope } from "./render.ts";
@@ -45,8 +44,23 @@ interface Part {
   code: string;
 }
 
+// Phase 2 plugs in here (maniatsx/client installs it), so phase 1 has no client dependency
+export type ScriptSlot = Slot;
+export interface ClientHost {
+  part(slot: Slot, code: string, id?: string): void;
+  include(lib: string, alias: string): void;
+}
+export interface ClientExtension {
+  element(tag: string, props: Record<string, unknown>): Record<string, unknown>;
+  finish(): void;
+}
+let clientFactory: ((host: ClientHost) => ClientExtension) | undefined;
+export function installClientExtension(factory: (host: ClientHost) => ClientExtension): void {
+  clientFactory = factory;
+}
+
 interface ScriptScope {
-  client: ClientScope;
+  client: ClientExtension | undefined;
   includes: Map<string, string>;
   slots: Record<Slot, Part[]>;
   rawScript: boolean;
@@ -55,7 +69,7 @@ interface ScriptScope {
 
 function createScope(): ScriptScope {
   const scope: ScriptScope = {
-    client: undefined as unknown as ClientScope,
+    client: undefined,
     includes: new Map(),
     slots: {
       structs: [],
@@ -71,7 +85,7 @@ function createScope(): ScriptScope {
       this.rawScript = true;
     },
   };
-  scope.client = new ClientScope({
+  const host: ClientHost = {
     part(slot, code, id) {
       const parts = scope.slots[slot];
       if (id !== undefined && parts.some((part) => part.id === id)) return;
@@ -80,7 +94,8 @@ function createScope(): ScriptScope {
     include(lib, alias) {
       addInclude(scope, lib, alias);
     },
-  });
+  };
+  scope.client = clientFactory?.(host);
   return scope;
 }
 
@@ -204,7 +219,7 @@ function assemble(scope: ScriptScope, manialinkId: string): string | null {
 function ManialinkBody(props: { manialinkId: string; children?: Node }): Node {
   const scope = createScope();
   const xml = renderChildren(props.children, { key: SCOPE_KEY, value: scope });
-  scope.client.finish();
+  scope.client?.finish();
   const script = assemble(scope, props.manialinkId);
   return [raw(xml), script === null ? null : jsx("script", { children: ms.raw(script) })];
 }

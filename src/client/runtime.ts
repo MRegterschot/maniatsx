@@ -1,5 +1,6 @@
 import { ms } from "../ms.ts";
 import { useRenderScope } from "../render.ts";
+import { installClientExtension, type ClientHost } from "../manialink.tsx";
 import {
   CLIENT,
   type ClientBinding,
@@ -12,11 +13,7 @@ import {
 } from "./contract.ts";
 
 export const CLIENT_SCOPE = Symbol.for("maniatsx.manialink");
-type Slot = "structs" | "globals" | "functions" | "stateInit" | "main" | "events" | "loop";
-export interface ClientHost {
-  part(slot: Slot, code: string, id?: string): void;
-  include(lib: string, alias: string): void;
-}
+export type { ClientHost } from "../manialink.tsx";
 const literalText = (value: string) => ms`${value}`.code;
 function typeName(type: MsType): string {
   if (typeof type === "string") return type;
@@ -234,3 +231,6 @@ export const __mtx: CompiledRuntime = {
   onInit: (body) => scope().lifecycle("main", body),
   onFrame: (body) => scope().lifecycle("loop", body),
 };
+
+// Importing maniatsx/client (as compiled code does) enables client handles in <Manialink>
+installClientExtension((host) => new ClientScope(host));
