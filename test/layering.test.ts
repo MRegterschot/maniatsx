@@ -7,10 +7,12 @@ test("phase 1 sources don't import phase 2 code", () => {
   const offenders: string[] = [];
   for (const file of core) {
     const source = readFileSync(`src/${file}`, "utf8");
-    for (const [, kind, spec] of source.matchAll(/^import (type )?[^"]*"(\.\/[^"]+)"/gm)) {
-      if (!/^\.\/(client|compiler|maniascript)\//.test(spec!)) continue;
-      if (kind && spec === "./client/contract.ts") continue;
-      offenders.push(`${file} -> ${spec}`);
+    // Any path literal counts: static imports, re-exports and inline import() types
+    for (const [line] of source.matchAll(
+      /^.*["']\.\/(client|compiler|maniascript)\/[^"']*["'].*$/gm,
+    )) {
+      if (/^import type \{[^}]*\} from "\.\/client\/contract\.ts";$/.test(line.trim())) continue;
+      offenders.push(`${file}: ${line.trim()}`);
     }
   }
   expect(offenders).toEqual([]);

@@ -23,7 +23,7 @@ type Bound<T, K extends keyof T> = Omit<T, K> & {
   [P in K]: T[P] | ClientBinding<NonNullable<T[P]>>;
 };
 type Controls<T extends { hidden?: unknown; pos?: unknown }> = Omit<Bound<T, "hidden">, "pos"> & {
-  pos?: T["pos"] | ClientBinding<import("./maniascript/types.ts").Vec2>;
+  pos?: T["pos"] | ClientBinding<{ readonly X: number; readonly Y: number }>;
 } & Events;
 type EventBase = {
   [K in keyof Base]: Base[K] extends { id?: string } ? Base[K] & Events : Base[K];
