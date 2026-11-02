@@ -43,3 +43,23 @@ test("sites are relative to the root, so output doesn't depend on the machine", 
   expect(code).toContain('"test/compiler/fixtures/site.tsx:2:');
   expect(code).not.toContain(process.cwd());
 });
+
+test("numeric contexts, diagnostics, and division warning", () => {
+  const compile = (body: string) =>
+    compileSource(
+      "test/compiler/numbers.tsx",
+      `import { client, type Integer, type Real } from "maniatsx/client"; client.handler(() => { ${body} });`,
+    );
+  const real = compile("const x: Real = 1;");
+  expect(real.diagnostics).toEqual([]);
+  expect(real.code).toContain("declare Real x = 1.;");
+  expect(compile("const x: number = 1;").diagnostics).toMatchObject([
+    { code: "bare-number", severity: "error" },
+  ]);
+  expect(
+    compile("const i: Integer = 1; const r: Real = 2; const x = i + r;").diagnostics,
+  ).toMatchObject([{ code: "mixed-number", severity: "error" }]);
+  expect(compile("const i: Integer = 1; const x: Real = i / i;").diagnostics).toMatchObject([
+    { code: "int-division", severity: "warning" },
+  ]);
+});

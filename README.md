@@ -2,7 +2,7 @@
 
 Write Trackmania manialinks in TSX with full type checking, and render them to Manialink v3 XML.
 
-**Status: phase 1, server-side TSX to XML.** ManiaScript is still hand-written, but composed and parameterised safely. See [PLAN.md](PLAN.md).
+**Status: phase 1 is available; phase 2 client compilation is experimental.** See [PLAN.md](PLAN.md).
 
 ## Setup
 
@@ -36,6 +36,46 @@ const xml = render(
 ```
 
 `render()` returns a string with the XML prolog first; `<Manialink prolog={false}>` drops it. Nothing renders before `render()` is called.
+
+## Client code (phase 2, experimental)
+
+Client TypeScript compiles into ManiaScript at build time. This is experimental and has not yet been verified in game.
+
+```tsx
+import { client, type Integer } from "maniatsx/client";
+
+export function Counter({ start }: { start: Integer }) {
+  const count = client.state<Integer>(start);
+  return (
+    <frame>
+      <label text={client.bind(() => "Clicks: " + count.value)} />
+      <quad
+        size={[20, 8]}
+        onClick={client.handler(() => {
+          count.value += 1;
+        })}
+      />
+    </frame>
+  );
+}
+```
+
+For Bun runtime imports, register the plugin in a preload file and run `bun --preload ./preload.ts app.tsx`:
+
+```ts
+// preload.ts
+import { maniatsxPlugin } from "maniatsx/bun-plugin";
+Bun.plugin(maniatsxPlugin());
+```
+
+For a bundle, pass the plugin to `Bun.build`:
+
+```ts
+import { maniatsxPlugin } from "maniatsx/bun-plugin";
+await Bun.build({ entrypoints: ["./app.tsx"], outdir: "./dist", plugins: [maniatsxPlugin()] });
+```
+
+Alternatively, run `maniatsx-compile --project tsconfig.json --out compiled`. It writes transformed files under the output directory; add `--all` to copy untouched project files too, or `--check` to report diagnostics without writing. The plugin uses the working directory as its compiler root; `rootDir` or `tsconfigPath` can select a different root.
 
 ## Attributes
 

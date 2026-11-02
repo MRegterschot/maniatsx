@@ -31,6 +31,10 @@
     "./maniascript": {
       "types": "./dist/maniascript/index.d.ts",
       "default": "./dist/maniascript/index.js"
+    },
+    "./bun-plugin": {
+      "types": "./dist/compiler/bun-plugin.d.ts",
+      "default": "./dist/compiler/bun-plugin.js"
     }
   },
   "engines": {
@@ -44,7 +48,8 @@
     "bench": "bun bench/render.bench.tsx",
     "format": "prettier --write src test scripts examples bench",
     "render": "bun src/cli.ts",
-    "gen:maniascript": "bun scripts/gen-maniascript-api.ts"
+    "gen:maniascript": "bun scripts/gen-maniascript-api.ts",
+    "compile": "bun bin/maniatsx-compile.ts"
   },
   "devDependencies": {
     "@maniascript/api": "^10.0.0",
@@ -54,10 +59,13 @@
     "fast-xml-parser": "^5.11.2",
     "prettier": "^3.9.10",
     "typescript": "^7.0.2",
-    "typescript6": "npm:typescript@6.0.3",
     "xmllint-wasm": "^5.3.0"
   },
   "bin": {
-    "maniatsx": "./bin/maniatsx.ts"
+    "maniatsx": "./bin/maniatsx.ts",
+    "maniatsx-compile": "./bin/maniatsx-compile.ts"
+  },
+  "dependencies": {
+    "typescript6": "npm:typescript@6.0.3"
   }
 }

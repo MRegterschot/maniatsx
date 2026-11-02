@@ -33,3 +33,29 @@ test("compiled counter renders a valid script", async () => {
     await rm(target, { force: true });
   }
 });
+
+test("compiled lifecycle and hidden binding render valid script", async () => {
+  const file = "test/compiler/fixtures/lifecycle.tsx";
+  const result = compileSource(file, await Bun.file(file).text());
+  expect(result.diagnostics).toEqual([]);
+  const target = "test/compiler/.tmp/lifecycle.tsx";
+  await mkdir("test/compiler/.tmp", { recursive: true });
+  try {
+    await Bun.write(target, result.code);
+    const { Lifecycle } = await import(`./.tmp/${"lifecycle"}.tsx`);
+    const script = extractScripts(
+      render(
+        <Manialink id="lifecycle">
+          <Lifecycle />
+        </Manialink>,
+      ),
+    )[0]!;
+    expect(script).toContain('GetFirstChild("status")');
+    expect(script).toContain("TextLib::ToUpperCase");
+    expect(script).toContain("foreach");
+    expect(script).toContain(".Visible = !");
+    expect(parseManiaScript(script).errors).toEqual([]);
+  } finally {
+    await rm(target, { force: true });
+  }
+});
