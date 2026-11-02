@@ -22,6 +22,7 @@ export function parseManiaScript(code: string): { errors: string[] } {
   parser.removeErrorListeners();
   parser.addErrorListener(listener);
   parser.program();
+  errors.push(...gameQuirks(code));
   return { errors };
 }
 
@@ -30,4 +31,20 @@ export function extractScripts(xml: string): string[] {
     xml.matchAll(/<script\b[^>]*>\s*<!--([\s\S]*?)-->\s*<\/script\s*>/g),
     (match) => match[1]!,
   );
+}
+
+// Rules the game enforces but @maniascript/parser doesn't
+function gameQuirks(code: string): string[] {
+  const lines = code.split("\n");
+  let lastTopLevel = "";
+  for (const [i, raw] of lines.entries()) {
+    const line = raw.trim();
+    if (line === "" || line.startsWith("//") || /^\s/.test(raw)) continue;
+    if (/^main\s*\(/.test(line) && /^declare\b/.test(lastTopLevel))
+      return [
+        `${i + 1}:0: game: syntax error, unexpected main (put a function between globals and main)`,
+      ];
+    lastTopLevel = line;
+  }
+  return [];
 }

@@ -79,3 +79,10 @@ describe("ManiaScript syntax", () => {
     ]);
   });
 });
+
+test("flags main() directly after a global declaration, which the game rejects", () => {
+  expect(parseManiaScript("declare Integer G;\nmain() {}").errors.join()).toContain(
+    "unexpected main",
+  );
+  expect(parseManiaScript("declare Integer G;\nVoid F() {}\nmain() {}").errors).toEqual([]);
+});
