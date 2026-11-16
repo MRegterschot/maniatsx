@@ -9,6 +9,7 @@ const PROLOG = '<?xml version="1.0" encoding="utf-8" standalone="yes"?>';
 const SCOPE_KEY = Symbol.for("maniatsx.manialink");
 const LIB = /^[\w./-]+$/;
 const ALIAS = /^[A-Za-z_]\w*$/;
+const DIRTY_MARK = "\0dirty\0";
 
 type Slot =
   "structs" | "globals" | "functions" | "refInit" | "stateInit" | "main" | "events" | "loop";
@@ -51,6 +52,9 @@ export interface ClientHost {
   part(slot: Slot, code: string, id?: string): void;
   // Placeholder for a lib qualifier; resolves to the page's alias for it when the script is assembled
   lib(lib: string): string;
+  // Placeholder statement for `Mtx_Dirty = True;`: it is dropped unless `dirtyWrites(true)` is called before assembly
+  dirty(): string;
+  dirtyWrites(on: boolean): void;
 }
 export interface ClientExtension {
   element(tag: string, props: Record<string, unknown>): Record<string, unknown>;
@@ -66,6 +70,7 @@ interface ScriptScope {
   includes: Map<string, string>;
   // Libs compiled client code uses; included under their own name unless the page already includes them
   libs: Set<string>;
+  dirtyWrites: boolean;
   slots: Record<Slot, Part[]>;
   rawScript: boolean;
   onRawScript(): void;
@@ -76,6 +81,7 @@ function createScope(): ScriptScope {
     client: undefined,
     includes: new Map(),
     libs: new Set(),
+    dirtyWrites: false,
     slots: {
       structs: [],
       globals: [],
@@ -101,6 +107,10 @@ function createScope(): ScriptScope {
       if (!LIB.test(lib)) throw new Error(`invalid ManiaScript lib ${JSON.stringify(lib)}`);
       scope.libs.add(lib);
       return `\0lib:${lib}\0`;
+    },
+    dirty: () => DIRTY_MARK,
+    dirtyWrites(on) {
+      scope.dirtyWrites = on;
     },
   };
   scope.client = clientFactory?.(host);
@@ -228,7 +238,12 @@ function assemble(scope: ScriptScope, manialinkId: string): string | null {
     lines.push("    foreach (Event in PendingEvents) {", ...indentBlock(events, 6), "    }");
   }
   lines.push(...indentBlock(loop, 4), "  }", "}");
-  return lines.join("\n").replace(/\0lib:(\w+)\0/g, (_, lib: string) => scope.includes.get(lib)!);
+  // Without bindings nothing reads the flag, so its writes (one statement per line) go away
+  const kept = scope.dirtyWrites ? lines : lines.filter((line) => line.trim() !== DIRTY_MARK);
+  return kept
+    .join("\n")
+    .replaceAll(DIRTY_MARK, scope.dirtyWrites ? "Mtx_Dirty = True;" : "")
+    .replace(/\0lib:(\w+)\0/g, (_, lib: string) => scope.includes.get(lib)!);
 }
 
 function ManialinkBody(props: { manialinkId: string; children?: Node }): Node {

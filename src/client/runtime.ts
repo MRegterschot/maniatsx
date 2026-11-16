@@ -8,6 +8,7 @@ import {
   type ClientHandler,
   type ClientRef,
   type ClientState,
+  type ClientStateOptions,
   type CompiledCode,
   type CompiledRuntime,
   type MsType,
@@ -63,8 +64,20 @@ function literal(value: unknown, type: MsType): string {
   }
   throw new TypeError(`Expected ${type} value`);
 }
+// FNV-1a, so persisted names depend only on the source site
+function hash(text: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
+  return (h >>> 0).toString(16).padStart(8, "0");
+}
+// Matches the compiler's `Mtx_Dirty = True;` statements so they can be dropped on pages without bindings
+const DIRTY_WRITE = /\bMtx_Dirty = True;/g;
 export class ClientScope {
   private states = new Map<ClientState, string>();
+  private persistedNames = new Set<string>();
+  private stateCount = 0;
+  // Persisted states read by the code being filled: each function body must re-bind them
+  private used: Set<ClientState>[] = [];
   private refs = new Map<ClientRef, string>();
   private attached = new Map<ClientRef, { tag: string; id: string }>();
   private functions = new Set<string>();
@@ -73,10 +86,25 @@ export class ClientScope {
   private controlCount = 0;
   private dirty = false;
   constructor(private host: ClientHost) {}
+  // Bindings are the only readers of the flag, so only they turn it on
   private ensureDirty() {
     if (!this.dirty) {
       this.dirty = true;
       this.host.part("globals", "declare Boolean Mtx_Dirty;");
+    }
+  }
+  // Fills code that becomes a function body and returns the declarations that re-bind its persisted states
+  private body(code: CompiledCode, indent = ""): { text: string; declares: string } {
+    const used = new Set<ClientState>();
+    this.used.push(used);
+    try {
+      const text = this.fill(code);
+      const declares = [...used]
+        .map((s) => `${indent}declare ${typeName(s.type)} ${this.states.get(s)!} for Page;\n`)
+        .join("");
+      return { text, declares };
+    } finally {
+      this.used.pop();
     }
   }
   fill(code: CompiledCode): string {
@@ -108,16 +136,56 @@ export class ClientScope {
       }
       result += value + code.code[i + 1]!;
     });
-    return result;
+    return result.replace(DIRTY_WRITE, () => this.host.dirty());
   }
   state(state: ClientState): string {
+    if (state.persist) this.used.at(-1)?.add(state);
     let name = this.states.get(state);
     if (name) return name;
-    name = `Mtx_S${this.states.size + 1}`;
+    if (state.persist) return this.persisted(state);
+    name = `Mtx_S${++this.stateCount}`;
     this.states.set(state, name);
-    this.ensureDirty();
     this.host.part("globals", `declare ${typeName(state.type)} ${name};`);
     this.host.part("stateInit", `${name} = ${this.fill(state.initial)};`, `state:${name}`);
+    return name;
+  }
+  // `declare … for Page = init;` in main applies init once; function bodies re-bind it without a value
+  private persisted(state: ClientState): string {
+    const { key } = state.persist!;
+    let name: string;
+    if (key !== undefined) {
+      if (!/^[A-Za-z]\w*$/.test(key))
+        throw new Error(
+          `client.state at ${state.site}: invalid persist key ${JSON.stringify(key)}`,
+        );
+      name = `Mtx_P_${key}`;
+      if (this.persistedNames.has(name))
+        throw new Error(
+          `client.state at ${state.site}: persist key "${key}" is used twice on this page; keys must be unique`,
+        );
+    } else {
+      // The same site rendered twice (a component used twice) gets a numbered suffix
+      const stem = state.site
+        .replace(/:\d+:\d+$/, "")
+        .split("/")
+        .pop()!
+        .replace(/\.\w+$/, "");
+      const base = `Mtx_P_${stem.replace(/\W/g, "") || "state"}_${hash(state.site)}`;
+      name = base;
+      for (let n = 2; this.persistedNames.has(name); n++) name = `${base}_${n}`;
+    }
+    this.persistedNames.add(name);
+    this.states.set(state, name);
+    this.used.push(new Set());
+    try {
+      this.host.part(
+        "stateInit",
+        `declare ${typeName(state.type)} ${name} for Page = ${this.fill(state.initial)};`,
+        `state:${name}`,
+      );
+    } finally {
+      this.used.pop();
+    }
     return name;
   }
   // Global of a ref used in client code; its init is emitted in finish(), once attachment is known
@@ -133,7 +201,14 @@ export class ClientScope {
   fn(fn: ClientFn): string {
     if (!this.functions.has(fn.name)) {
       this.functions.add(fn.name);
-      this.host.part("functions", this.fill(fn.declaration), `fn:${fn.name}`);
+      const { text, declares } = this.body(fn.declaration, "  ");
+      // The signature ends at the first `{`; the lowerer indents the body by two spaces
+      const open = text.indexOf("{\n") + 2;
+      this.host.part(
+        "functions",
+        declares && open > 1 ? text.slice(0, open) + declares + text.slice(open) : text,
+        `fn:${fn.name}`,
+      );
     }
     return fn.name;
   }
@@ -185,7 +260,8 @@ export class ClientScope {
         (attr !== "onSubmit" || tag === "entry" || tag === "textedit")
       ) {
         out.scriptevents = true;
-        const body = this.fill((handle as ClientHandler).body);
+        const { text, declares } = this.body((handle as ClientHandler).body);
+        const body = declares + text;
         let name = this.handlers.get(body);
         if (!name) {
           name = `Mtx_H${this.handlers.size + 1}`;
@@ -234,6 +310,7 @@ export class ClientScope {
         `${name} <=> (Page.MainFrame.GetFirstChild(${literalText(target.id)}) as ${ref.cls});`,
       );
     }
+    this.host.dirtyWrites(this.dirty);
     if (this.dirty) {
       this.host.part("main", "Mtx_Dirty = True;");
       this.host.part("loop", "Mtx_Dirty = False;");
@@ -254,12 +331,13 @@ function scope(): ClientScope {
 }
 export const __mtx: CompiledRuntime = {
   ref: (cls, site) => ({ $$typeof: CLIENT, kind: "ref", cls, site, control: undefined as never }),
-  state: (type, initial, site) => ({
+  state: (type, initial, site, options?: ClientStateOptions) => ({
     $$typeof: CLIENT,
     kind: "state",
     type,
     initial,
     site,
+    ...(options?.persist && { persist: options.key === undefined ? {} : { key: options.key } }),
     value: undefined as never,
   }),
   handler: (body) => ({ $$typeof: CLIENT, kind: "handler", body }),

@@ -29,38 +29,34 @@
 #Include "TimeLib" as TimeLib
 #Include "ColorLib" as CL
 declare CMlFrame widget;
-declare Boolean Mtx_Dirty;
-declare Boolean Mtx_S1;
 declare CMlFrame Mtx_R1;
 declare CMlLabel Mtx_R2;
 Void Mtx_H1() {
+declare Boolean Mtx_P_actiongroup_fa4d5dac for Page;
 declare CAnimManager::EAnimManagerEasing ease = CAnimManager::EAnimManagerEasing::ExpInOut;
-if (Mtx_S1) {
+if (Mtx_P_actiongroup_fa4d5dac) {
   AnimMgr.Add(Mtx_R1, "<frame pos='" ^ -15. ^ " 0' />", 200, ease);
   AnimMgr.Add(Mtx_R2, "<label rot='0' pos='2.6 -2.15' />", 200, ease);
 } else {
   AnimMgr.Add(Mtx_R1, "<frame pos='0 0' />", 200, ease);
   AnimMgr.Add(Mtx_R2, "<label rot='180' pos='2.25 -2.9' />", 200, ease);
 }
-Mtx_S1 = !Mtx_S1;
-Mtx_Dirty = True;
+Mtx_P_actiongroup_fa4d5dac = !Mtx_P_actiongroup_fa4d5dac;
 }
 main() {
   Mtx_R1 <=> (Page.MainFrame.GetFirstChild("mtx-1") as CMlFrame);
   Mtx_R2 <=> (Page.MainFrame.GetFirstChild("mtx-2") as CMlLabel);
-  Mtx_S1 = False;
+  declare Boolean Mtx_P_actiongroup_fa4d5dac for Page = False;
   widget <=> (Page.MainFrame.GetFirstChild("widget") as CMlFrame);
 
   sleep(300);
   widget.Show();
-  Mtx_Dirty = True;
   while (True) {
     yield;
     foreach (Event in PendingEvents) {
       if (Event.Control == Null) continue;
       if (Event.Type == CMlScriptEvent::Type::MouseClick && Event.ControlId == "mtx-3") Mtx_H1();
     }
-    Mtx_Dirty = False;
   }
 }
 --></script>

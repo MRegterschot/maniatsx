@@ -87,3 +87,33 @@ client.onInit(() => { ${body} });`,
   expect(prim).not.toContain("<=>");
   expect(prim).toContain("n = 2;");
 });
+
+test("client.state persist options are baked into the runtime call", () => {
+  const compile = (args: string) =>
+    compileSource(
+      "test/compiler/opts.tsx",
+      `import {client} from "maniatsx/client";\nexport const s = client.state<boolean>(false${args});`,
+    );
+  const plain = compile("");
+  expect(plain.diagnostics).toEqual([]);
+  expect(plain.code).not.toContain("persist");
+
+  const persisted = compile(", { persist: true }");
+  expect(persisted.diagnostics).toEqual([]);
+  expect(persisted.code).toContain('"test/compiler/opts.tsx:2:18", {"persist":true})');
+
+  const keyed = compile(', { persist: true, key: "open" }');
+  expect(keyed.diagnostics).toEqual([]);
+  expect(keyed.code).toContain('{"persist":true,"key":"open"}');
+
+  expect(compile(", { persist: false }").code).not.toContain("persist");
+  for (const bad of [
+    ", opts",
+    ", { persist: flag }",
+    ", { persist: true, key: name }",
+    ', { persist: true, key: "1x" }',
+    ', { key: "open" }',
+    ", { persist: true, other: 1 }",
+  ])
+    expect(compile(bad).diagnostics.map((d) => d.code)).toContain("state-options");
+});

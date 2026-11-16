@@ -63,8 +63,9 @@ function transform(program: ts.Program, files: readonly ts.SourceFile[], root: s
               replacement = `__mtx.ref(${JSON.stringify(ty.class)}, ${JSON.stringify(site)})`;
           } else if (kind === "state" && arg) {
             const type = toMs(analyzer.stateArgTy(node, node));
-            if (type)
-              replacement = `__mtx.state(${JSON.stringify(type)}, ${descriptor([{ kind: "value", type, expr: arg.getText(file) }])}, ${JSON.stringify(site)})`;
+            const options = stateOptions(analyzer, node.arguments[1]);
+            if (type && options !== null)
+              replacement = `__mtx.state(${JSON.stringify(type)}, ${descriptor([{ kind: "value", type, expr: arg.getText(file) }])}, ${JSON.stringify(site)}${options ? `, ${JSON.stringify(options)}` : ""})`;
           } else if (arg) {
             const closure = unparen(arg);
             if (ts.isArrowFunction(closure) || ts.isFunctionExpression(closure)) {
@@ -142,6 +143,42 @@ function transform(program: ts.Program, files: readonly ts.SourceFile[], root: s
     output.set(file.fileName, text);
   }
   return { output, diagnostics };
+}
+
+// Options must be literals so the compiler can bake them in; null means an error was reported
+function stateOptions(
+  analyzer: Analyzer,
+  node: ts.Expression | undefined,
+): { persist: true; key?: string } | undefined | null {
+  if (!node) return undefined;
+  const bad = (at: ts.Node, message: string) => {
+    analyzer.report(at, "state-options", message);
+    return null;
+  };
+  const literal = unparen(node);
+  if (!ts.isObjectLiteralExpression(literal))
+    return bad(node, "client.state options must be an object literal like `{ persist: true }`.");
+  let persist = false;
+  let key: string | undefined;
+  for (const prop of literal.properties) {
+    const name = ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name) ? prop.name.text : "";
+    const value = ts.isPropertyAssignment(prop) ? unparen(prop.initializer) : undefined;
+    if (name === "persist" && value) {
+      if (value.kind === ts.SyntaxKind.TrueKeyword) persist = true;
+      else if (value.kind !== ts.SyntaxKind.FalseKeyword)
+        return bad(value, "`persist` must be the literal `true` or `false`.");
+    } else if (name === "key" && value) {
+      if (!ts.isStringLiteralLike(value)) return bad(value, "`key` must be a string literal.");
+      if (!/^[A-Za-z]\w*$/.test(value.text))
+        return bad(
+          value,
+          "`key` may only contain letters, digits and `_`, and must start with a letter.",
+        );
+      key = value.text;
+    } else return bad(prop, "client.state options support only `persist` and `key` as literals.");
+  }
+  if (key !== undefined && !persist) return bad(node, "`key` only applies with `persist: true`.");
+  return persist ? { persist: true, ...(key !== undefined && { key }) } : undefined;
 }
 
 export function compileSource(

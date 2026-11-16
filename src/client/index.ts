@@ -21,6 +21,7 @@ export type {
   CompiledCode,
   CompiledRuntime,
   ClientState,
+  ClientStateOptions,
   ClientHandler,
   ClientRef,
   ClientBinding,

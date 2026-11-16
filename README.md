@@ -77,6 +77,10 @@ await Bun.build({ entrypoints: ["./app.tsx"], outdir: "./dist", plugins: [maniat
 
 Alternatively, run `maniatsx-compile --project tsconfig.json --out compiled`. It writes transformed files under the output directory; add `--all` to copy untouched project files too, or `--check` to report diagnostics without writing. The plugin uses the working directory as its compiler root; `rootDir` or `tsconfigPath` can select a different root.
 
+### Persisted state
+
+`client.state<boolean>(false, { persist: true })` keeps the value when the page is sent again with the same manialink id (it compiles to `declare … for Page`); the initial value only applies the first time. The options must be literals. The storage name derives from the source position, so moving the call resets the stored value; pass `key: "open"` to pin it.
+
 ### Client refs
 
 `client.state`, `client.handler` and `client.bind` provide client values, event handlers and bindings. Refs let client code target rendered elements, including elements supplied by another component:

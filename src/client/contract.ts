@@ -46,8 +46,17 @@ export interface ClientState<T = unknown> {
   readonly type: MsType;
   readonly initial: CompiledCode; // usually a single value hole
   readonly site: SourceSite;
+  // Kept across page re-sends (`declare … for Page`); the key defaults to a hash of `site`
+  readonly persist?: { readonly key?: string };
   // Type-level only: client code reads/writes `.value`; the compiler rewrites it
   value: T;
+}
+
+export interface ClientStateOptions {
+  // Survive the page being re-sent with the same manialink id; `initial` only applies the first time
+  persist?: boolean;
+  // Stable name part for persisted state (letters, digits, `_`); defaults to a hash of the source site
+  key?: string;
 }
 
 export interface ClientRef<T = unknown> {
@@ -96,7 +105,12 @@ export interface ClientLifecycle {
 
 // What the compiler rewrites each authoring call into (exported by maniatsx/client as `__mtx`)
 export interface CompiledRuntime {
-  state<T>(type: MsType, initial: CompiledCode, site: SourceSite): ClientState<T>;
+  state<T>(
+    type: MsType,
+    initial: CompiledCode,
+    site: SourceSite,
+    options?: ClientStateOptions,
+  ): ClientState<T>;
   ref<T>(cls: string, site: SourceSite): ClientRef<T>;
   handler(body: CompiledCode): ClientHandler;
   bind<T>(type: MsType, expr: CompiledCode): ClientBinding<T>;
@@ -106,5 +120,6 @@ export interface CompiledRuntime {
 }
 
 // Reserved ManiaScript names: everything prefixed Mtx_. The compiler emits `Mtx_Dirty = True;` after
-// every state write; the runtime declares Mtx_Dirty and re-evaluates bindings when it is set.
+// every state write; the runtime declares Mtx_Dirty and re-evaluates bindings when it is set. Pages
+// without bindings drop the flag and its writes entirely.
 export const DIRTY_FLAG = "Mtx_Dirty";

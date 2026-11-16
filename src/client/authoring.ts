@@ -8,6 +8,7 @@ import {
   type ClientHandler,
   type ClientRef,
   type ClientState,
+  type ClientStateOptions,
 } from "./contract.ts";
 
 import type { CMlControl, CSmMlScriptIngame } from "../maniascript/api.generated.ts";
@@ -25,9 +26,11 @@ function notCompiled(api: string): never {
 }
 
 export const client = {
-  // Client-side variable; `initial` is evaluated on the server and sent as a literal
-  state<T>(initial: T): ClientState<T> {
+  // Client-side variable; `initial` is evaluated on the server and sent as a literal.
+  // `{ persist: true }` keeps it across page re-sends; the options must be literals
+  state<T>(initial: T, options?: ClientStateOptions): ClientState<T> {
     void initial;
+    void options;
     return notCompiled("client.state");
   },
   // Handle to a control: pass it as `ref` to an element, read `.control` in client code. The type argument is required

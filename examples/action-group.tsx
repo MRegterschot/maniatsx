@@ -42,7 +42,7 @@ export interface ActionGroupViewProps {
 // Port of action-group.hbs. Logic: the open/closed state and the slide animation, compiled to ManiaScript.
 export function ActionGroup(props: ActionGroupProps) {
   const closedX: Real = -props.actions.length * SIZE;
-  const open = client.state<boolean>(false);
+  const open = client.state<boolean>(false, { persist: true });
   const slider = client.ref<CMlFrame>();
   const icon = client.ref<CMlLabel>();
 

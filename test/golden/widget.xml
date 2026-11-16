@@ -10,7 +10,6 @@
 #Include "TimeLib" as TimeLib
 #Include "ColorLib" as CL
 declare CMlFrame widget;
-declare Boolean Mtx_Dirty;
 declare Vec2 Mtx_S1;
 declare Boolean Mtx_S2;
 declare Integer Mtx_S3;
@@ -28,9 +27,7 @@ main() {
   {
     declare CMlFrame frame <=> (Page.MainFrame.GetFirstChild("widget") as CMlFrame);
     Mtx_S1 = frame.RelativePosition_V3;
-    Mtx_Dirty = True;
   }
-  Mtx_Dirty = True;
   while (True) {
     yield;
     foreach (Event in PendingEvents) {
@@ -42,17 +39,14 @@ main() {
       if (player == Null) {
         if (Mtx_S2) {
           Mtx_S2 = False;
-          Mtx_Dirty = True;
           Mtx_F_hide_while_driving_slideTo(frame, Mtx_S1.X, Mtx_S1.Y, 600, CAnimManager::EAnimManagerEasing::CircOut);
         }
       } else if (ML::Abs(player.Speed * 3.6) > 10.) {
         if (Mtx_S3 != -1) {
           Mtx_S3 = -1;
-          Mtx_Dirty = True;
         }
         if (!Mtx_S2) {
           Mtx_S2 = True;
-          Mtx_Dirty = True;
           declare Real x = 322.;
           if (frame.AbsolutePosition_V3.X < 0.) {
             x = frame.Size.X * -frame.RelativeScale - 322.;
@@ -62,17 +56,13 @@ main() {
       } else if (Mtx_S2) {
         if (Mtx_S3 == -1) {
           Mtx_S3 = Now;
-          Mtx_Dirty = True;
         } else if (Now - Mtx_S3 >= 1000) {
           Mtx_S2 = False;
-          Mtx_Dirty = True;
           Mtx_S3 = -1;
-          Mtx_Dirty = True;
           Mtx_F_hide_while_driving_slideTo(frame, Mtx_S1.X, Mtx_S1.Y, 600, CAnimManager::EAnimManagerEasing::CircOut);
         }
       }
     }
-    Mtx_Dirty = False;
   }
 }
 --></script>
