@@ -258,6 +258,10 @@ Element and attribute types are generated from `vendor/manialink_v3.xsd` (reaby/
 
 ## Development
 
+## Visual tests
+
+Install the bridge plugin with `bun run bridge:install`, then load it in Openplanet from the Developer menu. Be in a map (playground) for examples that use `InputPlayer`. Run `bun run visual --update` once to create baselines, review `test/visual/.out/report.html`, then run `bun run visual` to compare them. The report includes baseline, actual, and diff images.
+
 ```sh
 bun install
 bun run typecheck   # tsc --noEmit over the whole project

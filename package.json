@@ -54,15 +54,20 @@
     "render": "bun --preload ./scripts/preload-compiler.ts src/cli.ts",
     "gen:maniascript": "bun scripts/gen-maniascript-api.ts",
     "compile": "bun bin/maniatsx-compile.ts",
-    "send": "bun scripts/send-manialink.ts"
+    "send": "bun scripts/send-manialink.ts",
+    "visual": "bun --preload ./scripts/preload-compiler.ts scripts/visual.ts",
+    "bridge:install": "bun scripts/install-bridge.ts"
   },
   "devDependencies": {
     "@evotm/gbxclient": "^1.5.0",
     "@maniascript/api": "^10.0.0",
     "@maniascript/parser": "^16.0.0",
     "@types/bun": "^1.4.4",
+    "@types/pngjs": "^6.0.5",
     "antlr4ng": "^3.0.16",
     "fast-xml-parser": "^5.11.2",
+    "pixelmatch": "^8.0.0",
+    "pngjs": "^7.0.0",
     "prettier": "^3.9.10",
     "typescript": "^7.0.2",
     "xmllint-wasm": "^5.3.0"

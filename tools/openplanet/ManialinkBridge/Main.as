@@ -260,14 +260,17 @@ Json::Value@ CmdScreenshot(Json::Value@ req) {
         vp.ScreenShotHeight = uint(int(req["height"]));
     }
 
+    // Callers delete shots after reading, so the game may reuse the previous name for the new file
     string before = string(vp.ScreenShotFullName);
+    bool beforeExisted = before != "" && IO::FileExists(before);
     vp.ScreenShotDoCaptureTga();
     uint start = Time::Now;
     string path = "";
     while (Time::Now - start < timeoutMs) {
         yield();
         string name = string(vp.ScreenShotFullName);
-        if (name != "" && name != before && IO::FileExists(name)) { path = name; break; }
+        if (name == "" || !IO::FileExists(name)) continue;
+        if (name != before || !beforeExisted) { path = name; break; }
     }
     // Wait for the writer to finish: same size on two checks
     if (path != "") {
