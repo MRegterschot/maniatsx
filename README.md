@@ -77,6 +77,68 @@ await Bun.build({ entrypoints: ["./app.tsx"], outdir: "./dist", plugins: [maniat
 
 Alternatively, run `maniatsx-compile --project tsconfig.json --out compiled`. It writes transformed files under the output directory; add `--all` to copy untouched project files too, or `--check` to report diagnostics without writing. The plugin uses the working directory as its compiler root; `rootDir` or `tsconfigPath` can select a different root.
 
+### Client refs
+
+`client.state`, `client.handler` and `client.bind` provide client values, event handlers and bindings. Refs let client code target rendered elements, including elements supplied by another component:
+
+```tsx
+const nameRef = client.ref<CMlLabel>();
+client.onInit(() => {
+  nameRef.control.Value = name;
+});
+return <label ref={nameRef} />;
+```
+
+A ref must be placed exactly once in the rendered page. A ref that is never placed or is placed twice causes render to fail.
+
+## Theming
+
+Themes have three layers: tokens, text and layout; primitive slots such as panels and labels; and widget skins that replace a widget view. Most themes only need the first layer.
+
+```tsx
+const kit = createThemeKit<Tokens>({ id: "default", name: "Default", tokens: { ... } });
+const midnight = kit.defineTheme({ id: "midnight", name: "Midnight", tokens: { color: { surface: "112" } } });
+
+<kit.ThemeProvider theme={midnight}><MapInfo /></kit.ThemeProvider>;
+const tokens = kit.useTokens();
+const title = kit.useText("map-info.title", "Map");
+```
+
+`useTokens()` returns merged tokens. `useText(key, fallback)` reads themed text and uses the fallback (or key) when missing. Layout entries are keyed by widget name and can set anchor, margin, size, scale or visibility.
+
+Slots define shared primitives or widget views. A theme can override a slot; overrides receive `Default` so they can wrap the original. Resolution is theme override, then the slot variant for the theme or an ancestor, then `Default`.
+
+```tsx
+const Panel = slot<PanelProps>("ui/panel", DefaultPanel);
+const compact = kit.defineTheme({
+  id: "compact",
+  name: "Compact",
+  components: [override(Panel, ({ Default, ...props }) => <Default {...props} variant="thin" />)],
+});
+```
+
+`Anchored` places a widget using `useLayout` and `anchorPos`:
+
+```tsx
+<Anchored name="map-info" layout={{ anchor: "top-right", margin: [2, 2], size: [55, 10] }}>
+  <MapInfoView />
+</Anchored>
+```
+
+The screen is 320×180 with its origin at the center and y increasing upward. Margin is inward from the anchored edges; size is unscaled content size (scale is applied by layout).
+
+Keep widget logic separate from its view. Logic creates state, handlers, bindings and refs, then passes them as typed props to a view slot. A skin only needs to place those refs; a ref never placed or placed twice fails at render.
+
+```tsx
+const nameRef = client.ref<CMlLabel>();
+client.onInit(() => {
+  nameRef.control.Value = name;
+});
+return <View name={name} nameRef={nameRef} />;
+```
+
+Themes apply when the page is rendered. Switching themes means re-sending the pages.
+
 ## Attributes
 
 - `undefined` and `null` omit the attribute. Numbers get at most 4 decimals and no exponent; `NaN` and `Infinity` throw.
