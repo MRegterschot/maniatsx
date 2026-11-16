@@ -6,6 +6,7 @@ import {
   type ClientBinding,
   type ClientFn,
   type ClientHandler,
+  type ClientRef,
   type ClientState,
   type CompiledCode,
   type CompiledRuntime,
@@ -64,6 +65,8 @@ function literal(value: unknown, type: MsType): string {
 }
 export class ClientScope {
   private states = new Map<ClientState, string>();
+  private refs = new Map<ClientRef, string>();
+  private attached = new Map<ClientRef, { tag: string; id: string }>();
   private functions = new Set<string>();
   private handlers = new Map<string, string>();
   private elementCount = 0;
@@ -79,7 +82,6 @@ export class ClientScope {
   fill(code: CompiledCode): string {
     if (code.code.length !== code.holes.length + 1)
       throw new Error(`Invalid compiled code at ${code.site}`);
-    for (const [lib, alias] of code.includes) this.host.include(lib, alias);
     for (const struct of code.structs) this.host.part("structs", struct, struct);
     let result = code.code[0]!;
     code.holes.forEach((hole, i) => {
@@ -91,11 +93,17 @@ export class ClientScope {
         case "state":
           value = this.state(hole.get());
           break;
+        case "ref":
+          value = this.ref(hole.get());
+          break;
         case "action":
           value = literalText(hole.get().name);
           break;
         case "fn":
           value = this.fn(hole.get());
+          break;
+        case "lib":
+          value = this.host.lib(hole.lib);
           break;
       }
       result += value + code.code[i + 1]!;
@@ -110,6 +118,16 @@ export class ClientScope {
     this.ensureDirty();
     this.host.part("globals", `declare ${typeName(state.type)} ${name};`);
     this.host.part("stateInit", `${name} = ${this.fill(state.initial)};`, `state:${name}`);
+    return name;
+  }
+  // Global of a ref used in client code; its init is emitted in finish(), once attachment is known
+  ref(ref: ClientRef): string {
+    let name = this.refs.get(ref);
+    if (name) return name;
+    if (!/^[A-Za-z]\w*$/.test(ref.cls)) throw new Error(`Invalid control class at ${ref.site}`);
+    name = `Mtx_R${this.refs.size + 1}`;
+    this.refs.set(ref, name);
+    this.host.part("globals", `declare ${ref.cls} ${name};`);
     return name;
   }
   fn(fn: ClientFn): string {
@@ -153,7 +171,15 @@ export class ClientScope {
     let control: string | undefined;
     for (const [attr, handle] of entries) {
       delete out[attr];
-      if (
+      if (handle.kind === "ref" && attr === "ref") {
+        const ref = handle as ClientRef;
+        const prior = this.attached.get(ref);
+        if (prior)
+          throw new Error(
+            `client.ref declared at ${ref.site} is attached to two elements (<${prior.tag} id="${prior.id}"> and <${tag} id="${id}">); a ref points at one control`,
+          );
+        this.attached.set(ref, { tag, id });
+      } else if (
         handle.kind === "handler" &&
         events[attr] &&
         (attr !== "onSubmit" || tag === "entry" || tag === "textedit")
@@ -183,8 +209,7 @@ export class ClientScope {
         const binding = handle as ClientBinding;
         let expr = this.fill(binding.expr);
         if (attr === "bgcolor" && binding.type === "Text") {
-          this.host.include("ColorLib", "ColorLib");
-          expr = `ColorLib::HexToRgb(${expr})`;
+          expr = `${this.host.lib("ColorLib")}::HexToRgb(${expr})`;
         }
         const property = bindings[tag]![attr]!;
         const update =
@@ -198,6 +223,17 @@ export class ClientScope {
     return out;
   }
   finish() {
+    for (const [ref, name] of this.refs) {
+      const target = this.attached.get(ref);
+      if (!target)
+        throw new Error(
+          `client.ref declared at ${ref.site} is used in client code but never attached to an element in this <Manialink>; add ref={...} to one`,
+        );
+      this.host.part(
+        "refInit",
+        `${name} <=> (Page.MainFrame.GetFirstChild(${literalText(target.id)}) as ${ref.cls});`,
+      );
+    }
     if (this.dirty) {
       this.host.part("main", "Mtx_Dirty = True;");
       this.host.part("loop", "Mtx_Dirty = False;");
@@ -217,6 +253,7 @@ function scope(): ClientScope {
   return found;
 }
 export const __mtx: CompiledRuntime = {
+  ref: (cls, site) => ({ $$typeof: CLIENT, kind: "ref", cls, site, control: undefined as never }),
   state: (type, initial, site) => ({
     $$typeof: CLIENT,
     kind: "state",

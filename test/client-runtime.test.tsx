@@ -1,12 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { Manialink, render } from "../src/index.ts";
+import { Manialink, Script, render } from "../src/index.ts";
 import { __mtx, action, type CompiledCode, type MsType } from "../src/client/index.ts";
 import { extractScripts, parseManiaScript } from "./support/maniascript.ts";
 
 const code = (text: string): CompiledCode => ({
   code: [text],
   holes: [],
-  includes: [],
   structs: [],
   site: "test",
 });
@@ -90,8 +89,9 @@ describe("client runtime", () => {
   });
   test("typed literals and function requirements", () => {
     const fn = __mtx.fn("Mtx_F_test", {
-      ...code("Integer Mtx_F_test() { return 1; }"),
-      includes: [["MathLib", "MathLib"]],
+      ...code(""),
+      code: ["Integer Mtx_F_test() { return ", "::Abs(1); }"],
+      holes: [{ kind: "lib", lib: "MathLib" }],
       structs: ["#Struct K_Test { Integer X; }"],
     });
     const holes = [
@@ -122,6 +122,31 @@ describe("client runtime", () => {
     expect(xml).toContain('"a-" ^ "-b"');
     expect(xml).toContain("[1., 2.]");
     expect(xml).toContain("#Struct K_Test");
+    expect(xml).toContain('#Include "MathLib" as MathLib');
+    expect(xml).toContain("return MathLib::Abs(1);");
+  });
+  test("lib holes reuse the page's alias, whatever the include order", () => {
+    const abs: CompiledCode = {
+      ...code(""),
+      code: ["", "::Abs(-1)"],
+      holes: [{ kind: "lib", lib: "MathLib" }],
+    };
+
+    for (const before of [true, false]) {
+      const include = <Script.Include lib="MathLib" as="ML" />;
+      const xml = page(
+        <>
+          {before && include}
+          <label text={__mtx.bind("Integer", abs)} />
+          {!before && include}
+        </>,
+      );
+
+      expect(xml).toContain('#Include "MathLib" as ML');
+      expect(xml).not.toContain("as MathLib");
+      expect(xml).toContain("ML::Abs(-1)");
+      expect(xml).not.toContain("\0");
+    }
   });
   test("rejects invalid placement and struct values", () => {
     expect(() => render(<label text={__mtx.bind("Text", code('"x"'))} />)).toThrow("Manialink");

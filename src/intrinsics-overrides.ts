@@ -1,4 +1,4 @@
-import type { ClientBinding, ClientHandler } from "./client/contract.ts";
+import type { ClientBinding, ClientHandler, ClientRef } from "./client/contract.ts";
 // Hand-maintained fixes on top of the generated XSD typings.
 import type { GeneratedIntrinsicElements as Gen, LabelTextfont } from "./generated/intrinsics.ts";
 
@@ -18,7 +18,9 @@ type Events = {
   onRightClick?: ClientHandler;
   onMouseOver?: ClientHandler;
   onMouseOut?: ClientHandler;
-};
+} & Refable;
+// Any element can be referenced from client code
+type Refable = { ref?: ClientRef };
 type Bound<T, K extends keyof T> = Omit<T, K> & {
   [P in K]: T[P] | ClientBinding<NonNullable<T[P]>>;
 };
@@ -26,7 +28,7 @@ type Controls<T extends { hidden?: unknown; pos?: unknown }> = Omit<Bound<T, "hi
   pos?: T["pos"] | ClientBinding<{ readonly X: number; readonly Y: number }>;
 } & Events;
 type EventBase = {
-  [K in keyof Base]: Base[K] extends { id?: string } ? Base[K] & Events : Base[K];
+  [K in keyof Base]: Base[K] extends { id?: string } ? Base[K] & Events : Base[K] & Refable;
 };
 
 // Only "ScoresTable" (shown with the scoreboard) is confirmed, via EvoSC's production templates
@@ -38,7 +40,7 @@ export interface IntrinsicElements extends Omit<
 > {
   // XSD lacks layer, which TM2020 controllers use
   manialink: Patch<Base["manialink"], { layer?: ManialinkLayer }>;
-  include: { url: string; key?: string | number; children?: never };
+  include: { url: string; key?: string | number; children?: never } & Refable;
   // XSD types linespacing as bool, the game takes a real; text may be a number (scores, times)
   label: Controls<
     Bound<
@@ -54,8 +56,8 @@ export interface IntrinsicElements extends Omit<
   quad: Controls<Bound<Base["quad"], "opacity" | "image" | "bgcolor">>;
   gauge: Controls<Bound<Base["gauge"], "ratio">>;
   entry: Controls<Bound<FontPatch<Base["entry"]>, "default">> & { onSubmit?: ClientHandler };
-  fileentry: FontPatch<Base["fileentry"]>;
-  style: FontPatch<Base["style"]>;
+  fileentry: FontPatch<Base["fileentry"]> & Refable;
+  style: FontPatch<Base["style"]> & Refable;
   // XSD omits name (used by production templates); text children are not allowed
   textedit: Events & { onSubmit?: ClientHandler } & FontPatch<
       Patch<

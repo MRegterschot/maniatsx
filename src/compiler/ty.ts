@@ -21,6 +21,7 @@ export type Ty =
   | { class: string }
   | { enum: string }
   | { state: Ty }
+  | { ref: Ty }
   | { fn: FnSig };
 
 export const isNum = (t: Ty) => t === "Integer" || t === "Real";
@@ -41,6 +42,7 @@ export function msName(t: Ty): string {
   if ("class" in t) return t.class;
   if ("enum" in t) return t.enum;
   if ("state" in t) return `State<${msName(t.state)}>`;
+  if ("ref" in t) return `Ref<${msName(t.ref)}>`;
   return "fn";
 }
 

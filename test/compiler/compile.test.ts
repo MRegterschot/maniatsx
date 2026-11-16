@@ -30,7 +30,6 @@ test("debugEmit joins holes", () => {
       { kind: "fn", get: () => undefined as never },
       { kind: "action", get: () => undefined as never },
     ],
-    includes: [],
     structs: [],
     site: "test",
   };

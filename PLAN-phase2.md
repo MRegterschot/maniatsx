@@ -93,6 +93,7 @@ The API typings are generated from the TM2020 `doc.h` published in bigbang1112/m
 - **Bindings:** `client.bind(fn)` on a whitelisted attribute → the initial value is computed client-side in main, and updated in the loop slot when `Mtx_Dirty`. Whitelist: label `text` → `.Value`, `hidden` → `.Visible = !…`, `pos` → `.RelativePosition_V3`, `opacity` → `.Opacity` (label, quad), gauge `ratio` → `.Ratio`, quad `image` → `.ChangeImageUrl()`, quad `bgcolor` → `.BgColor` (Vec3 from hex), entry `default` → `.Value`. Others are a compile error.
 - **Handlers:** `onClick`, `onRightClick`, `onMouseOver`, `onMouseOut` (+ `onSubmit` for entry, `onKeyPress` page-level) → `Void Mtx_H<n>()` functions plus dispatch in the events slot on `Event.Type` + `Event.ControlId`. Identical compiled handlers are deduped by hash.
 - **Actions:** `action(name)` → `.trigger(…args: string[])` emits `TriggerPageAction(name ^ "|" ^ …)`, escaping `|`. The server side gets a typed parser for the payload (to be wired into gbx-service's ActionRouter in M6). Named entries are sent with the action by the game.
+- **Refs:** `client.ref<CMlX>()` (type argument required) + `ref={r}` on any element → the element gets its `id` (or `mtx-<n>`); a used ref emits `declare CMlX Mtx_R<n>;` and `Mtx_R<n> <=> (Page.MainFrame.GetFirstChild("<id>") as CMlX);` first in main, and `r.control` in client code compiles to `Mtx_R<n>`. Render throws (naming the ref's file:line) when a used ref is never attached or is attached twice. See PLAN-theming.md T4.
 - **Lifecycle:** `client.onInit` → main slot; `client.onFrame` → loop slot (runs every frame, so the docs warn about cost).
 - Everything goes through the phase 1 `Script.*` slots, so hand-written `ms` parts and compiled parts can coexist in one page.
 
@@ -102,6 +103,8 @@ The API typings are generated from the TM2020 `doc.h` published in bigbang1112/m
 - `splice(i, 1)` → `.removekey(i)`: doc.h only lists `removekey` on associative arrays, the wiki uses it on lists. Verify in game (P2-7).
 - `Math.floor/round/ceil` → `MathLib::FloorInteger/NearestInteger/CeilingInteger` (they return Integer; `NearestInteger` may round negative halves differently from JS). Math functions missing from doc.h are rejected.
 - Class-typed declarations and assignments use `<=>`, including `X <=> Null`.
+- `ml` is typed `CSmMlScriptIngame`, the context TM2020 ingame layers run in (`InputPlayer`, `GUIPlayer`, `Players`).
+- Lib qualifiers (`MathLib::`, `TextLib::`) are `lib` holes, not text: they resolve to the page's existing alias (`#Include "MathLib" as ML` → `ML::Abs`) or include the lib under its own name. Compiled and hand-written parts can share a page whatever their include order.
 
 ## Requirements
 
@@ -122,8 +125,15 @@ The API typings are generated from the TM2020 `doc.h` published in bigbang1112/m
 | P2-3 ✅ | Lowering of the D4 subset + golden tests | Sonnet / Codex |
 | P2-4 ✅ | Runtime: `client.state/bind/handler/onInit/onFrame/fn`, `action`, auto ids, dirty loop (D5) | Sonnet |
 | P2-5 ✅ | Bun plugin + `maniatsx compile` + "not compiled" errors | Codex |
-| P2-6 | Port one real widget (the gocontrolpanel action group toggle) to client TS; compare with the hand-written script | lead |
+| P2-6 ✅ | Port one real widget (the gocontrolpanel action group toggle) to client TS; compare with the hand-written script (see below) | lead |
 | P2-7 | In-game verification of all goldens (needs the game) | user + lead |
+
+### P2-6 result: action group toggle (`examples/action-group.tsx`)
+
+- Split into `ActionGroup` (logic: `client.state`, two `client.ref`s, one `client.handler` calling `AnimMgr.Add`) and `ActionGroupView` (a `slot()` view taking the handler and refs as props; a skin replaces it). No hand-written ManiaScript is left in the component and no `src` change was needed.
+- Hand-written script: 16 lines (1 in `Script.Main`, 15 in `Script.Events`). Compiled: 26 script lines specific to the toggle (handler 14, globals 4, ref and state init 3, dispatch 1, dirty flag 4). The whole `<script>` grows from 36 to 41 lines. The TS body is 14 lines.
+- Behaviour differences: the handler is attached by id (`mtx-3`) instead of `HasClass("trigger")`, so the quad lost its `class="trigger"` and gained ids on the slider frame, chevron label and trigger quad; the animated frame and icon are resolved once through refs instead of `Event.Control.Parent.Controls[...]` each click; the open flag is a plain global instead of `declare ... for This`, so it resets when the page is re-sent; it also sets `Mtx_Dirty` although nothing is bound (one wasted assignment per frame, cheap).
+- Left over elsewhere: `widget.tsx` still hand-writes `sleep(300); widget.Show();` (D4 has no `sleep`/`yield`).
 
 ## Risks
 

@@ -10,6 +10,7 @@ import {
 import { compat, hasNum, isClass, isNum, isVec, msName, toMs, type FnSig, type Ty } from "./ty.ts";
 import {
   decimal,
+  libRef,
   realLiteral,
   safeLocalName,
   stringLiteral,
@@ -125,7 +126,6 @@ const BAD_BINARY: Partial<Record<ts.SyntaxKind, [string, string]>> = {
 };
 
 export class Lowerer {
-  readonly includes = new Set<string>();
   private out: Out | null = null;
   private lazy = 0;
   private quiet = 0;
@@ -490,7 +490,12 @@ export class Lowerer {
     const root = this.rootIdentifier(target);
     if (root) {
       const k = this.a.classify(root, this.closure);
-      if (k.k === "capture" || k.k === "function" || k.k === "fn" || k.k === "action") {
+      // `props.count.value = …` / `props.title.control.X = …` write through a handle, not to the capture
+      const throughHandle = this.handleRooted(target);
+      if (
+        !throughHandle &&
+        (k.k === "capture" || k.k === "function" || k.k === "fn" || k.k === "action")
+      ) {
         this.err(
           e,
           "assign-capture",
@@ -524,6 +529,25 @@ export class Lowerer {
       )
         cur = unparen(cur.expression);
       else return undefined;
+    }
+  }
+
+  // True when the chain passes `.value` of a state or `.control` of a ref
+  private handleRooted(expr: ts.Expression): boolean {
+    let e = unparen(expr);
+    for (;;) {
+      if (ts.isPropertyAccessExpression(e)) {
+        const receiver = e.expression;
+        const key = e.name.text;
+        if (key === "value" || key === "control") {
+          const ty = this.quietly(() => this.lower(receiver).ty);
+          if (typeof ty === "object" && (key === "value" ? "state" in ty : "ref" in ty))
+            return true;
+        }
+        e = unparen(e.expression);
+      } else if (ts.isElementAccessExpression(e) || ts.isNonNullExpression(e))
+        e = unparen(e.expression);
+      else return false;
     }
   }
 
@@ -842,11 +866,11 @@ export class Lowerer {
   // Lowers an expression that must be a plain value (not a state/fn/action handle)
   private val(node: ts.Expression, expected?: Ty): E {
     const e = this.lower(node, expected);
-    if (typeof e.ty === "object" && ("state" in e.ty || "fn" in e.ty)) {
+    if (typeof e.ty === "object" && ("state" in e.ty || "ref" in e.ty || "fn" in e.ty)) {
       this.err(
         node,
         "handle",
-        `\`${this.snippet(node)}\` is a client handle, not a value. ${"state" in e.ty ? "Read or write `.value`." : "Call it."}`,
+        `\`${this.snippet(node)}\` is a client handle, not a value. ${"state" in e.ty ? "Read or write `.value`." : "ref" in e.ty ? "Use `.control`." : "Call it."}`,
       );
     } else if (e.ty === "Action") {
       this.err(
@@ -1025,6 +1049,8 @@ export class Lowerer {
         return atom("NullId", "Ident");
       case "state":
         return { items: [{ kind: "state", expr: node.text }], ty: k.ty, prec: ATOM };
+      case "ref":
+        return { items: [{ kind: "ref", expr: node.text }], ty: k.ty, prec: ATOM };
       case "fn":
         return { items: [{ kind: "fn", expr: node.text }], ty: k.ty, prec: ATOM };
       case "action":
@@ -1150,17 +1176,16 @@ export class Lowerer {
     const recvNode = unparen(node.expression);
     if (ts.isIdentifier(recvNode)) {
       const rk = this.a.classify(recvNode, this.closure);
-      if (rk.k === "ml") return this.apiMember(node, atom("", { class: "CMlScriptIngame" }), true);
+      if (rk.k === "ml")
+        return this.apiMember(node, atom("", { class: "CSmMlScriptIngame" }), true);
       if (rk.k === "lib") {
-        this.includes.add(rk.name);
         const sym = this.checker.getSymbolAtLocation(node.name);
         const ty = sym ? this.a.declTy(sym, node) : "Real";
-        return atom(`${rk.name}::${name}`, ty);
+        return { items: [libRef(rk.name), `::${name}`], ty, prec: ATOM };
       }
       if (rk.k === "global" && rk.name === "Math") {
         if (name === "PI") {
-          this.includes.add("MathLib");
-          return atom("MathLib::Pi", "Real");
+          return { items: [libRef("MathLib"), "::Pi"], ty: "Real", prec: ATOM };
         }
         return this.bad(node, "math", `\`Math.${name}\``, "Use the MathLib equivalents.");
       }
@@ -1174,8 +1199,15 @@ export class Lowerer {
       }
     }
 
+    if (name === "control") {
+      const inner = this.quietly(() => this.lower(recvNode).ty);
+      if (typeof inner === "object" && "ref" in inner) {
+        return { items: this.lower(recvNode).items, ty: inner.ref, prec: ATOM };
+      }
+    }
+
     // A chain rooted in a server-side declaration is captured whole
-    if (rootKind?.k === "capture" && this.isPlainChain(node)) {
+    if (rootKind?.k === "capture" && this.isPlainChain(node) && !this.handleRooted(node)) {
       if (name === "length") {
         const inner = this.quietly(() => this.lower(recvNode).ty);
         if (typeof inner === "object" && "array" in inner) return this.capture1(node, "Integer");
@@ -1184,6 +1216,8 @@ export class Lowerer {
       const ty = sym ? this.a.declTy(sym, node) : "Void";
       if (typeof ty === "object" && "state" in ty)
         return { items: [{ kind: "state", expr: node.getText() }], ty, prec: ATOM };
+      if (typeof ty === "object" && "ref" in ty)
+        return { items: [{ kind: "ref", expr: node.getText() }], ty, prec: ATOM };
       if (typeof ty === "object" && "fn" in ty)
         return { items: [{ kind: "fn", expr: node.getText() }], ty, prec: ATOM };
       if (ty === "Action")
@@ -1196,8 +1230,11 @@ export class Lowerer {
       if (typeof recv.ty === "object" && "array" in recv.ty)
         return { items: [...operand(recv, ATOM, false), ".count"], ty: "Integer", prec: ATOM };
       if (recv.ty === "Text") {
-        this.includes.add("TextLib");
-        return { items: ["TextLib::Length(", ...recv.items, ")"], ty: "Integer", prec: ATOM };
+        return {
+          items: [libRef("TextLib"), "::Length(", ...recv.items, ")"],
+          ty: "Integer",
+          prec: ATOM,
+        };
       }
     }
     return this.apiMember(node, recv, false);
@@ -1734,9 +1771,12 @@ export class Lowerer {
         return { items: [name, ...this.argList(args)], ty: ret, prec: ATOM };
       }
       if (rk.k === "lib") {
-        this.includes.add(rk.name);
         const { args, ret } = this.withDecls(node, this.declsOf(callee.name));
-        return { items: [`${rk.name}::${name}`, ...this.argList(args)], ty: ret, prec: ATOM };
+        return {
+          items: [libRef(rk.name), `::${name}`, ...this.argList(args)],
+          ty: ret,
+          prec: ATOM,
+        };
       }
     }
 
@@ -1765,6 +1805,9 @@ export class Lowerer {
     }
     if (typeof recv.ty === "object" && "state" in recv.ty) {
       return this.bad(node, "handle", `\`.${name}\` on a state handle`, "Use `.value`.");
+    }
+    if (typeof recv.ty === "object" && "ref" in recv.ty) {
+      return this.bad(node, "handle", `\`.${name}\` on a ref handle`, "Use `.control`.");
     }
     const decls = this.declsOf(callee.name);
     if (decls.length === 0)
@@ -1829,14 +1872,12 @@ export class Lowerer {
     if (global === "Math") {
       const lib = MATH_FNS[name];
       if (name === "random") {
-        this.includes.add("MathLib");
-        return atom("MathLib::Rand(0., 1.)", "Real");
+        return { items: [libRef("MathLib"), "::Rand(0., 1.)"], ty: "Real", prec: ATOM };
       }
       if (!lib)
         return this.bad(node, "math", `\`Math.${name}\``, "Use the MathLib functions directly.");
-      this.includes.add("MathLib");
       const { args, ret } = this.withDecls(node, this.a.libMember("MathLib", lib));
-      return { items: [`MathLib::${lib}`, ...this.argList(args)], ty: ret, prec: ATOM };
+      return { items: [libRef("MathLib"), `::${lib}`, ...this.argList(args)], ty: ret, prec: ATOM };
     }
     if (global === "console" && name === "log") {
       const args = node.arguments.map((a) => this.val(a));

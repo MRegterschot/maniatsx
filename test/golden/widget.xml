@@ -10,67 +10,69 @@
 #Include "TimeLib" as TimeLib
 #Include "ColorLib" as CL
 declare CMlFrame widget;
-declare Vec2 HS_BasePosition;
-declare CMlFrame HS_Target;
-declare Boolean HS_Hidden;
-Void hs_hide(Integer duration) {
-  HS_Hidden = True;
-  declare Real x;
-  if (HS_BasePosition[0] < 0.0) {
-    x = (HS_Target.Size[0] * -HS_Target.RelativeScale) - 322.0;
-  } else {
-    x = 322.0;
-  }
-  AnimMgr.Add(HS_Target, "<frame pos='" ^ x ^ " " ^ HS_BasePosition[1] ^ "' />", duration, CAnimManager::EAnimManagerEasing::ExpInOut);
-}
-
-Void hs_show(Integer duration) {
-  HS_Hidden = False;
-  AnimMgr.Add(HS_Target, "<frame pos='" ^ HS_BasePosition[0] ^ " " ^ HS_BasePosition[1] ^ "' />", duration, CAnimManager::EAnimManagerEasing::CircOut);
-}
-
-Void hidescript() {
-  if (HS_Target == Null) {
-    HS_Target <=> (Page.MainFrame.GetFirstChild("widget") as CMlFrame);
-    HS_BasePosition = HS_Target.AbsolutePosition_V3;
-  }
-
-  declare hideSpeed = 10;
-
-  if (InputPlayer == Null) {
-    if (HS_Hidden) {
-      hs_show(600);
-    }
-    return;
-  }
-
-  declare Boolean overHidespeed = ML::Abs(InputPlayer.Speed * 3.6) > hideSpeed;
-
-  if (overHidespeed && !HS_Hidden) {
-    hs_hide(1000);
-
-    while (InputPlayer.Speed * 3.6 > hideSpeed) {
-      yield;
-      hidescript();
-    }
-  }
-
-  if (!overHidespeed && HS_Hidden) {
-    sleep(1000);
-    hs_show(600);
-  }
+declare Boolean Mtx_Dirty;
+declare Vec2 Mtx_S1;
+declare Boolean Mtx_S2;
+declare Integer Mtx_S3;
+Void Mtx_F_hide_while_driving_slideTo(CMlFrame _frame, Real _x, Real _y, Integer _duration, CAnimManager::EAnimManagerEasing _easing) {
+  AnimMgr.Add(_frame, "<frame pos='" ^ _x ^ " " ^ _y ^ "' />", _duration, _easing);
 }
 main() {
+  Mtx_S1 = <0., 0.>;
+  Mtx_S2 = False;
+  Mtx_S3 = -1;
   widget <=> (Page.MainFrame.GetFirstChild("widget") as CMlFrame);
 
   sleep(300);
   widget.Show();
+  {
+    declare CMlFrame frame <=> (Page.MainFrame.GetFirstChild("widget") as CMlFrame);
+    Mtx_S1 = frame.RelativePosition_V3;
+    Mtx_Dirty = True;
+  }
+  Mtx_Dirty = True;
   while (True) {
     yield;
     foreach (Event in PendingEvents) {
       if (Event.Control == Null) continue;
     }
-    hidescript();
+    {
+      declare CMlFrame frame <=> (Page.MainFrame.GetFirstChild("widget") as CMlFrame);
+      declare CSmPlayer player <=> InputPlayer;
+      if (player == Null) {
+        if (Mtx_S2) {
+          Mtx_S2 = False;
+          Mtx_Dirty = True;
+          Mtx_F_hide_while_driving_slideTo(frame, Mtx_S1.X, Mtx_S1.Y, 600, CAnimManager::EAnimManagerEasing::CircOut);
+        }
+      } else if (ML::Abs(player.Speed * 3.6) > 10.) {
+        if (Mtx_S3 != -1) {
+          Mtx_S3 = -1;
+          Mtx_Dirty = True;
+        }
+        if (!Mtx_S2) {
+          Mtx_S2 = True;
+          Mtx_Dirty = True;
+          declare Real x = 322.;
+          if (frame.AbsolutePosition_V3.X < 0.) {
+            x = frame.Size.X * -frame.RelativeScale - 322.;
+          }
+          Mtx_F_hide_while_driving_slideTo(frame, x, Mtx_S1.Y, 1000, CAnimManager::EAnimManagerEasing::ExpInOut);
+        }
+      } else if (Mtx_S2) {
+        if (Mtx_S3 == -1) {
+          Mtx_S3 = Now;
+          Mtx_Dirty = True;
+        } else if (Now - Mtx_S3 >= 1000) {
+          Mtx_S2 = False;
+          Mtx_Dirty = True;
+          Mtx_S3 = -1;
+          Mtx_Dirty = True;
+          Mtx_F_hide_while_driving_slideTo(frame, Mtx_S1.X, Mtx_S1.Y, 600, CAnimManager::EAnimManagerEasing::CircOut);
+        }
+      }
+    }
+    Mtx_Dirty = False;
   }
 }
 --></script>

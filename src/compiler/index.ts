@@ -4,7 +4,7 @@ import type { CompiledCode } from "../client/contract.ts";
 import { Analyzer, authoringCallKind, unparen } from "./analyzer.ts";
 import { Lowerer } from "./lower.ts";
 import { toMs } from "./ty.ts";
-import { joinItems, type CompileDiagnostic, type Item } from "./util.ts";
+import { joinItems, type CompileDiagnostic, type HoleSpec, type Item } from "./util.ts";
 
 export type { CompileDiagnostic } from "./util.ts";
 
@@ -48,12 +48,20 @@ function transform(program: ts.Program, files: readonly ts.SourceFile[], root: s
           const rel = path.relative(root, file.fileName).split(path.sep).join("/");
           const site = `${rel}:${pos.line + 1}:${pos.character + 1}`;
           const arg = node.arguments[0];
-          const descriptor = (items: Item[], includes: string[] = [], structs: string[] = []) => {
+          const hole = (h: HoleSpec) =>
+            h.kind === "lib"
+              ? `{ kind: "lib", lib: ${JSON.stringify(h.lib)} }`
+              : `{ kind: ${JSON.stringify(h.kind)}${h.kind === "value" ? `, type: ${JSON.stringify(h.type)}` : ""}, get: () => (${h.expr}) }`;
+          const descriptor = (items: Item[], structs: string[] = []) => {
             const { code, holes } = joinItems(items);
-            return `{ code: ${JSON.stringify(code)}, holes: [${holes.map((h) => `{ kind: ${JSON.stringify(h.kind)}${h.kind === "value" ? `, type: ${JSON.stringify(h.type)}` : ""}, get: () => (${h.expr}) }`).join(", ")}], includes: ${JSON.stringify(includes.map((x) => [x, x]))}, structs: ${JSON.stringify(structs)}, site: ${JSON.stringify(site)} }`;
+            return `{ code: ${JSON.stringify(code)}, holes: [${holes.map(hole).join(", ")}], structs: ${JSON.stringify(structs)}, site: ${JSON.stringify(site)} }`;
           };
           let replacement: string | undefined;
-          if (kind === "state" && arg) {
+          if (kind === "ref") {
+            const ty = analyzer.refClassTy(node, node);
+            if (typeof ty === "object" && "class" in ty)
+              replacement = `__mtx.ref(${JSON.stringify(ty.class)}, ${JSON.stringify(site)})`;
+          } else if (kind === "state" && arg) {
             const type = toMs(analyzer.stateArgTy(node, node));
             if (type)
               replacement = `__mtx.state(${JSON.stringify(type)}, ${descriptor([{ kind: "value", type, expr: arg.getText(file) }])}, ${JSON.stringify(site)})`;
@@ -110,7 +118,7 @@ function transform(program: ts.Program, files: readonly ts.SourceFile[], root: s
                       ty: undefined,
                     },
               );
-              const code = descriptor(tracked.result.items, [...lowerer.includes], tracked.structs);
+              const code = descriptor(tracked.result.items, tracked.structs);
               if (kind === "bind") {
                 const type = tracked.result.ty && toMs(tracked.result.ty);
                 if (type) replacement = `__mtx.bind(${JSON.stringify(type)}, ${code})`;
@@ -205,11 +213,13 @@ export function debugEmit(code: CompiledCode, values: unknown[] = []): string {
   return code.holes.reduce(
     (out, hole, i) =>
       out +
-      (hole.kind === "value"
-        ? i in values
-          ? JSON.stringify(values[i])
-          : `<hole ${i}>`
-        : `<${hole.kind}>`) +
+      (hole.kind === "lib"
+        ? hole.lib
+        : hole.kind === "value"
+          ? i in values
+            ? JSON.stringify(values[i])
+            : `<hole ${i}>`
+          : `<${hole.kind}>`) +
       code.code[i + 1],
     code.code[0] ?? "",
   );

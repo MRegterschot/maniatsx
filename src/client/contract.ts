@@ -22,15 +22,17 @@ export type Hole =
   | { readonly kind: "state"; readonly get: () => ClientState }
   // Function name of a client.fn; using it registers the function
   | { readonly kind: "fn"; readonly get: () => ClientFn }
+  // Global variable name of a client.ref handle; using it requires the ref to be attached to an element
+  | { readonly kind: "ref"; readonly get: () => ClientRef }
   // Action name of an action() handle, emitted as a Text literal
-  | { readonly kind: "action"; readonly get: () => ClientAction };
+  | { readonly kind: "action"; readonly get: () => ClientAction }
+  // Qualifier of a ManiaScript lib (`MathLib` in `MathLib::Abs`), resolved to the page's #Include alias
+  | { readonly kind: "lib"; readonly lib: string };
 
 // ManiaScript with holes: code.length === holes.length + 1, joined as code[0] + hole[0] + code[1] ...
 export interface CompiledCode {
   readonly code: readonly string[];
   readonly holes: readonly Hole[];
-  // #Include requirements as [lib, alias]
-  readonly includes: readonly (readonly [string, string])[];
   // Full `#Struct K_Name { ... }` declarations the code needs
   readonly structs: readonly string[];
   readonly site: SourceSite;
@@ -46,6 +48,15 @@ export interface ClientState<T = unknown> {
   readonly site: SourceSite;
   // Type-level only: client code reads/writes `.value`; the compiler rewrites it
   value: T;
+}
+
+export interface ClientRef<T = unknown> {
+  readonly $$typeof: typeof CLIENT;
+  readonly kind: "ref";
+  readonly cls: string; // ManiaScript control class, e.g. "CMlLabel"
+  readonly site: SourceSite;
+  // Type-level only: client code reads `.control`; the compiler rewrites it to the ref's global
+  readonly control: T;
 }
 
 export interface ClientHandler {
@@ -86,6 +97,7 @@ export interface ClientLifecycle {
 // What the compiler rewrites each authoring call into (exported by maniatsx/client as `__mtx`)
 export interface CompiledRuntime {
   state<T>(type: MsType, initial: CompiledCode, site: SourceSite): ClientState<T>;
+  ref<T>(cls: string, site: SourceSite): ClientRef<T>;
   handler(body: CompiledCode): ClientHandler;
   bind<T>(type: MsType, expr: CompiledCode): ClientBinding<T>;
   fn(name: string, declaration: CompiledCode): ClientFn;

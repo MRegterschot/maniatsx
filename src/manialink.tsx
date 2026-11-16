@@ -10,7 +10,8 @@ const SCOPE_KEY = Symbol.for("maniatsx.manialink");
 const LIB = /^[\w./-]+$/;
 const ALIAS = /^[A-Za-z_]\w*$/;
 
-type Slot = "structs" | "globals" | "functions" | "stateInit" | "main" | "events" | "loop";
+type Slot =
+  "structs" | "globals" | "functions" | "refInit" | "stateInit" | "main" | "events" | "loop";
 
 /** Script source: a string, `ms` code, or arrays of those. Nullish and `false` are skipped. */
 export type ScriptCode = string | MsCode | false | null | undefined | readonly ScriptCode[];
@@ -48,7 +49,8 @@ interface Part {
 export type ScriptSlot = Slot;
 export interface ClientHost {
   part(slot: Slot, code: string, id?: string): void;
-  include(lib: string, alias: string): void;
+  // Placeholder for a lib qualifier; resolves to the page's alias for it when the script is assembled
+  lib(lib: string): string;
 }
 export interface ClientExtension {
   element(tag: string, props: Record<string, unknown>): Record<string, unknown>;
@@ -62,6 +64,8 @@ export function installClientExtension(factory: (host: ClientHost) => ClientExte
 interface ScriptScope {
   client: ClientExtension | undefined;
   includes: Map<string, string>;
+  // Libs compiled client code uses; included under their own name unless the page already includes them
+  libs: Set<string>;
   slots: Record<Slot, Part[]>;
   rawScript: boolean;
   onRawScript(): void;
@@ -71,10 +75,12 @@ function createScope(): ScriptScope {
   const scope: ScriptScope = {
     client: undefined,
     includes: new Map(),
+    libs: new Set(),
     slots: {
       structs: [],
       globals: [],
       functions: [],
+      refInit: [],
       stateInit: [],
       main: [],
       events: [],
@@ -91,8 +97,10 @@ function createScope(): ScriptScope {
       if (id !== undefined && parts.some((part) => part.id === id)) return;
       parts.push({ id, code });
     },
-    include(lib, alias) {
-      addInclude(scope, lib, alias);
+    lib(lib) {
+      if (!LIB.test(lib)) throw new Error(`invalid ManiaScript lib ${JSON.stringify(lib)}`);
+      scope.libs.add(lib);
+      return `\0lib:${lib}\0`;
     },
   };
   scope.client = clientFactory?.(host);
@@ -183,12 +191,15 @@ function indentBlock(parts: Part[], spaces: number): string[] {
 }
 
 function assemble(scope: ScriptScope, manialinkId: string): string | null {
-  const { structs, globals, functions, stateInit, main, events, loop } = scope.slots;
+  for (const lib of scope.libs) if (!scope.includes.has(lib)) addInclude(scope, lib, lib);
+
+  const { structs, globals, functions, refInit, stateInit, main, events, loop } = scope.slots;
   const count =
     scope.includes.size +
     structs.length +
     globals.length +
     functions.length +
+    refInit.length +
     stateInit.length +
     main.length +
     events.length +
@@ -207,6 +218,7 @@ function assemble(scope: ScriptScope, manialinkId: string): string | null {
     lines.push("Void Mtx_Noop() {}");
   lines.push(
     "main() {",
+    ...indentBlock(refInit, 2),
     ...indentBlock(stateInit, 2),
     ...indentBlock(main, 2),
     "  while (True) {",
@@ -216,7 +228,7 @@ function assemble(scope: ScriptScope, manialinkId: string): string | null {
     lines.push("    foreach (Event in PendingEvents) {", ...indentBlock(events, 6), "    }");
   }
   lines.push(...indentBlock(loop, 4), "  }", "}");
-  return lines.join("\n");
+  return lines.join("\n").replace(/\0lib:(\w+)\0/g, (_, lib: string) => scope.includes.get(lib)!);
 }
 
 function ManialinkBody(props: { manialinkId: string; children?: Node }): Node {

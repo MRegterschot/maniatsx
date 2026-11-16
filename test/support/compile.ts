@@ -1,12 +1,14 @@
 import { compileSource, debugEmit } from "../../src/compiler/index.ts";
 import type { CompiledCode } from "../../src/client/contract.ts";
 
-// debugEmit prints fn holes as <fn>; inline their names so the snippet reads like the real output
+// debugEmit prints fn holes as <fn>; inline fn names and lib qualifiers so the snippet reads like the real output
 function inlineFns(code: CompiledCode): CompiledCode {
   const text = [code.code[0]!];
   const holes: CompiledCode["holes"][number][] = [];
   code.holes.forEach((hole, i) => {
     if (hole.kind === "fn") text[text.length - 1] += hole.get().name + code.code[i + 1];
+    else if (hole.kind === "lib") text[text.length - 1] += hole.lib + code.code[i + 1];
+    else if (hole.kind === "ref") text[text.length - 1] += "Mtx_R" + code.code[i + 1];
     else {
       holes.push(hole);
       text.push(code.code[i + 1]!);
@@ -14,6 +16,9 @@ function inlineFns(code: CompiledCode): CompiledCode {
   });
   return { ...code, code: text, holes };
 }
+
+const libsOf = (code: CompiledCode) =>
+  [...new Set(code.holes.flatMap((h) => (h.kind === "lib" ? [h.lib] : [])))].sort();
 
 export interface Snippet {
   kind: string;
@@ -42,6 +47,7 @@ export function compileSnippets(file: string, source: string) {
     handler: record("handler", last),
     fn: record("fn", last),
     bind: record("bind", last),
+    ref: () => ({}),
     state: record("state", (args) => args[1] as CompiledCode),
   };
   const js = new Bun.Transpiler({ loader: "tsx" }).transformSync(
@@ -53,7 +59,7 @@ export function compileSnippets(file: string, source: string) {
       kind: r.kind,
       ms: debugEmit(inlineFns(r.code)),
       header: [
-        ...r.code.includes.map(([lib, alias]) => `#Include "${lib}" as ${alias}`),
+        ...libsOf(r.code).map((lib) => `#Include "${lib}" as ${lib}`),
         ...r.code.structs,
       ].join("\n"),
     });

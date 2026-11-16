@@ -1,72 +1,73 @@
-import { Script, ms } from "maniatsx";
+import { client, ml, type Integer, type Real, type Vec2 } from "maniatsx/client";
+import { CAnimManager, MathLib, type CMlFrame } from "maniatsx/maniascript";
 
 export interface HideWhileDrivingProps {
   /** Id of the frame to slide out of view while the player drives. */
   target: string;
   /** Speed in km/h above which the target hides. Default: 10. */
-  speed?: number;
+  speed?: Real;
 }
 
-// Port of scripts/hide.hbs. Rendered N times it defines the functions once, so use one target per page.
+const SHOW_DELAY: Integer = 1000;
+
+const slideTo = client.fn(
+  (
+    frame: CMlFrame,
+    x: Real,
+    y: Real,
+    duration: Integer,
+    easing: CAnimManager.EAnimManagerEasing,
+  ): void => {
+    ml.AnimMgr!.Add(frame, `<frame pos='${x} ${y}' />`, duration, easing);
+  },
+);
+
+// Port of scripts/hide.hbs. Shows again SHOW_DELAY ms after dropping below the speed, without blocking the script.
 export function HideWhileDriving(props: HideWhileDrivingProps) {
-  const speed = props.speed ?? 10;
-  return (
-    <>
-      <Script.Globals id="hide-while-driving">{`
-        declare Vec2 HS_BasePosition;
-        declare CMlFrame HS_Target;
-        declare Boolean HS_Hidden;
-      `}</Script.Globals>
-      <Script.Functions id="hide-while-driving">{ms`
-        Void hs_hide(Integer duration) {
-          HS_Hidden = True;
-          declare Real x;
-          if (HS_BasePosition[0] < 0.0) {
-            x = (HS_Target.Size[0] * -HS_Target.RelativeScale) - 322.0;
-          } else {
-            x = 322.0;
-          }
-          AnimMgr.Add(HS_Target, "<frame pos='" ^ x ^ " " ^ HS_BasePosition[1] ^ "' />", duration, CAnimManager::EAnimManagerEasing::ExpInOut);
-        }
+  const target = props.target;
+  const hideSpeed: Real = props.speed ?? 10;
 
-        Void hs_show(Integer duration) {
-          HS_Hidden = False;
-          AnimMgr.Add(HS_Target, "<frame pos='" ^ HS_BasePosition[0] ^ " " ^ HS_BasePosition[1] ^ "' />", duration, CAnimManager::EAnimManagerEasing::CircOut);
-        }
+  const base = client.state<Vec2>({ X: 0, Y: 0 });
+  const hidden = client.state<boolean>(false);
+  const slowSince = client.state<Integer>(-1);
 
-        Void hidescript() {
-          if (HS_Target == Null) {
-            HS_Target <=> (Page.MainFrame.GetFirstChild(${props.target}) as CMlFrame);
-            HS_BasePosition = HS_Target.AbsolutePosition_V3;
-          }
+  client.onInit(() => {
+    const frame = ml.Page!.MainFrame!.GetFirstChild(target) as CMlFrame;
+    base.value = frame.RelativePosition_V3;
+  });
 
-          declare hideSpeed = ${ms.int(speed)};
+  client.onFrame(() => {
+    const frame = ml.Page!.MainFrame!.GetFirstChild(target) as CMlFrame;
+    const player = ml.InputPlayer;
 
-          if (InputPlayer == Null) {
-            if (HS_Hidden) {
-              hs_show(600);
-            }
-            return;
-          }
+    if (player === null) {
+      if (hidden.value) {
+        hidden.value = false;
 
-          declare Boolean overHidespeed = ML::Abs(InputPlayer.Speed * 3.6) > hideSpeed;
+        slideTo(frame, base.value.X, base.value.Y, 600, CAnimManager.EAnimManagerEasing.CircOut);
+      }
+    } else if (MathLib.Abs(player.Speed * 3.6) > hideSpeed) {
+      if (slowSince.value !== -1) slowSince.value = -1;
 
-          if (overHidespeed && !HS_Hidden) {
-            hs_hide(1000);
+      if (!hidden.value) {
+        hidden.value = true;
 
-            while (InputPlayer.Speed * 3.6 > hideSpeed) {
-              yield;
-              hidescript();
-            }
-          }
+        let x: Real = 322;
+        if (frame.AbsolutePosition_V3.X < 0) x = frame.Size.X * -frame.RelativeScale - 322;
 
-          if (!overHidespeed && HS_Hidden) {
-            sleep(1000);
-            hs_show(600);
-          }
-        }
-      `}</Script.Functions>
-      <Script.Loop id="hide-while-driving">{"hidescript();"}</Script.Loop>
-    </>
-  );
+        slideTo(frame, x, base.value.Y, 1000, CAnimManager.EAnimManagerEasing.ExpInOut);
+      }
+    } else if (hidden.value) {
+      if (slowSince.value === -1) {
+        slowSince.value = ml.Now;
+      } else if (ml.Now - slowSince.value >= SHOW_DELAY) {
+        hidden.value = false;
+        slowSince.value = -1;
+
+        slideTo(frame, base.value.X, base.value.Y, 600, CAnimManager.EAnimManagerEasing.CircOut);
+      }
+    }
+  });
+
+  return null;
 }

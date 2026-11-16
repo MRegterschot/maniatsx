@@ -6,8 +6,16 @@ export interface Sink {
   report(node: ts.Node, code: string, message: string, severity?: "error" | "warning"): void;
 }
 
-export type AuthoringKind = "state" | "handler" | "bind" | "fn" | "onInit" | "onFrame";
-const AUTHORING_KINDS = new Set<string>(["state", "handler", "bind", "fn", "onInit", "onFrame"]);
+export type AuthoringKind = "state" | "ref" | "handler" | "bind" | "fn" | "onInit" | "onFrame";
+const AUTHORING_KINDS = new Set<string>([
+  "state",
+  "ref",
+  "handler",
+  "bind",
+  "fn",
+  "onInit",
+  "onFrame",
+]);
 
 export const LIBS = new Set(["MathLib", "TextLib", "TimeLib", "ColorLib", "AnimLib", "MapUnits"]);
 export const VEC_CTORS = new Set(["vec2", "vec3", "int2", "int3"]);
@@ -65,7 +73,7 @@ export type RootKind =
   | { k: "ml" | "client" | "actionFn" | "nullId" | "apiValue" | "unknown" }
   | { k: "lib" | "vecCtor" | "global"; name: string }
   | { k: "function" }
-  | { k: "state" | "fn" | "action" | "capture"; ty: Ty };
+  | { k: "state" | "ref" | "fn" | "action" | "capture"; ty: Ty };
 
 const GLOBAL_NAMES = new Set(["Math", "console", "Object", "Array", "Date", "JSON", "undefined"]);
 
@@ -203,6 +211,7 @@ export class Analyzer {
     }
     if (decl && (inAuthoring(decl) || inContract(decl))) {
       if (name === "ClientState") return { state: this.tyFromTypeNode(args?.[0], at) };
+      if (name === "ClientRef") return { ref: this.tyFromTypeNode(args?.[0], at) };
       if (name === "Action" || name === "ClientAction") return "Action";
     }
     if (decl && (name === "Array" || name === "ReadonlyArray") && !inLibrary(decl)) {
@@ -320,8 +329,21 @@ export class Analyzer {
 
   // ---- structs ----
 
+  // A component props interface carrying client handles is not data; never emit it as a #Struct
+  private hasHandleField(type: ts.Type): boolean {
+    return this.checker.getPropertiesOfType(type).some((prop) => {
+      const pd = prop.valueDeclaration;
+      if (!pd || !ts.isPropertySignature(pd) || !pd.type || !ts.isTypeReferenceNode(pd.type))
+        return false;
+      const name = ts.isQualifiedName(pd.type.typeName) ? pd.type.typeName.right : pd.type.typeName;
+      const decl = resolveSymbol(this.checker, name)?.declarations?.[0];
+      return !!decl && (inContract(decl) || inAuthoring(decl));
+    });
+  }
+
   useStruct(sym: ts.Symbol, at: ts.Node): string {
     const name = `K_${sym.name}`;
+    if (this.hasHandleField(this.checker.getDeclaredTypeOfSymbol(sym))) return name;
     this.depTarget?.push(name);
     if (!this.structDecls.has(name) && !this.building.has(name)) {
       this.building.add(name);
@@ -382,6 +404,7 @@ export class Analyzer {
       if (init && ts.isCallExpression(init)) {
         const kind = authoringCallKind(this.checker, init);
         if (kind === "state") return { state: this.stateArgTy(init, at) };
+        if (kind === "ref") return { ref: this.refClassTy(init, at) };
         if (kind === "fn") return { fn: this.fnSig(init, decl) };
         if (isActionFactoryCall(this.checker, init)) return "Action";
       }
@@ -428,6 +451,26 @@ export class Analyzer {
     const prop = this.checker.getPropertyOfType(this.checker.getTypeFromTypeNode(holder), keyName);
     const pd = prop?.valueDeclaration;
     return pd && (ts.isPropertySignature(pd) || ts.isPropertyDeclaration(pd)) ? pd.type : undefined;
+  }
+
+  // The control class of a `client.ref<CMlX>()`; the type argument is mandatory
+  refClassTy(call: ts.CallExpression, at: ts.Node): Ty {
+    const explicit = call.typeArguments?.[0];
+    if (!explicit)
+      return this.fail(
+        call,
+        "ref-type",
+        `\`${call.getText()}\` needs a type argument naming the control class, for example \`client.ref<CMlLabel>()\`.`,
+      );
+    const ty = this.tyFromTypeNode(explicit, at);
+    if (typeof ty === "object" && "class" in ty) return ty;
+    if (ty !== "Void")
+      this.report(
+        explicit,
+        "ref-type",
+        `\`client.ref<${explicit.getText()}>\` must name a ManiaScript control class such as CMlLabel.`,
+      );
+    return "Void";
   }
 
   stateArgTy(call: ts.CallExpression, at: ts.Node): Ty {
@@ -558,6 +601,7 @@ export class Analyzer {
     }
     const ty = this.declTy(sym, id);
     if (typeof ty === "object" && "state" in ty) return { k: "state", ty };
+    if (typeof ty === "object" && "ref" in ty) return { k: "ref", ty };
     if (typeof ty === "object" && "fn" in ty) return { k: "fn", ty };
     if (ty === "Action") return { k: "action", ty };
     return { k: "capture", ty };

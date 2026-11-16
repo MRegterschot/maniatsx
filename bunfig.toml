@@ -1,0 +1,3 @@
+[test]
+# Example components use client TS, so tests load them through the compiler like a consumer would
+preload = ["./scripts/preload-compiler.ts"]
