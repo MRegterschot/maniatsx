@@ -1,0 +1,8 @@
+[meta]
+name = "Manialink Bridge"
+author = "MRegterschot"
+category = "Developer"
+version = "0.1.0"
+
+[script]
+timeout = 0
