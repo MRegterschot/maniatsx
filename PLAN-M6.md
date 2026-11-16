@@ -58,7 +58,9 @@ Presets may set `layout` per widget key (`<pluginId>/<widgetId>`). Server admins
 | T10 | `ThemeData`: `kit.toData(theme)`, `ThemeProvider` accepting `ThemeData`; slots resolve variants by `chain` when there are no components | Codex |
 | T11 | esbuild plugin sharing the Bun plugin's core (`maniatsx/esbuild-plugin`) | Codex |
 | T12 | Shared versioned client values for update pages (design in PLAN-phase2 D5 first) | lead design, Sonnet |
-| T13 | Render-in-QuickJS smoke test: bundle a themed widget with esbuild and render it in `quickjs-emscripten` (dev dependency) | Codex |
+| [x] T13 | Render-in-QuickJS smoke test: bundle a themed widget with esbuild and render it in `quickjs-emscripten` (dev dependency) | Codex |
+
+T13 measurement: 47,108-byte bundle; QuickJS evaluation 14.35 ms; three preset renders 3.67 ms, 1.51 ms, and 1.24 ms (default, midnight, compact).
 
 ## gocontrolpanel milestones
 
