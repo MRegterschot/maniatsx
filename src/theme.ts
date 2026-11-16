@@ -37,6 +37,15 @@ export interface Theme<Tokens = unknown> {
   readonly components: readonly OverrideEntry<any>[];
 }
 
+export interface ThemeData<Tokens> {
+  id: string;
+  name: string;
+  chain: readonly string[];
+  tokens: Tokens;
+  text: Record<string, string>;
+  layout: Record<string, Partial<Layout>>;
+}
+
 export interface ThemeDefinition<Tokens> {
   id: string;
   name: string;
@@ -159,11 +168,12 @@ export function slot<P>(
 export interface ThemeKit<Tokens> {
   readonly base: Theme<Tokens>;
   defineTheme(definition: ThemeDefinition<Tokens>): Theme<Tokens>;
+  toData(theme: Theme<Tokens>): ThemeData<Tokens>;
   themes(): readonly Theme<Tokens>[];
   useTokens(): Tokens;
   useText(key: string, fallback?: string): string;
   useTheme(): Theme<Tokens>;
-  ThemeProvider: Component<{ theme: Theme<Tokens>; children?: Node }>;
+  ThemeProvider: Component<{ theme: Theme<Tokens> | ThemeData<Tokens>; children?: Node }>;
 }
 
 export function createThemeKit<Tokens>(definition: ThemeDefinition<Tokens>): ThemeKit<Tokens> {
@@ -191,16 +201,33 @@ export function createThemeKit<Tokens>(definition: ThemeDefinition<Tokens>): The
   };
   const base = make(definition);
   const themeContext = createContext(base);
-  const wrappedProvider: ThemeKit<Tokens>["ThemeProvider"] = ({ theme, children }) =>
-    jsx(themeContext.Provider, {
-      value: theme,
+  const wrappedProvider: ThemeKit<Tokens>["ThemeProvider"] = ({ theme, children }) => {
+    const isData = !("components" in theme);
+    if (
+      isData &&
+      (typeof theme.id !== "string" || !Array.isArray(theme.chain) || theme.chain[0] !== theme.id)
+    )
+      throw new Error("Invalid ThemeData: expected a string id and a chain starting with that id.");
+    const components = isData ? [] : theme.components;
+    return jsx(themeContext.Provider, {
+      value: theme as Theme<Tokens>,
       children: jsx(slotContext.Provider, {
-        value: { chain: theme.chain, components: theme.components, layout: theme.layout },
+        value: { chain: theme.chain, components, layout: theme.layout },
         children,
       }),
     });
+  };
   return {
     base,
+    toData: (theme) =>
+      structuredClone({
+        id: theme.id,
+        name: theme.name,
+        chain: theme.chain,
+        tokens: theme.tokens,
+        text: theme.text,
+        layout: theme.layout,
+      }),
     defineTheme: (def) => make(def, def.extends ?? base),
     themes: () => Object.freeze([...themes.values()]),
     useTokens: () => useContext(themeContext).tokens,

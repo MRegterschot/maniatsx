@@ -1,7 +1,6 @@
 import path from "node:path";
-import ts from "typescript6";
 import type { BunPlugin } from "bun";
-import { compileSource } from "./index.ts";
+import { compilePluginLoad, formatDiagnostic } from "./plugin-shared.ts";
 
 export function maniatsxPlugin(opts: { rootDir?: string; tsconfigPath?: string } = {}): BunPlugin {
   const rootDir = path.resolve(
@@ -15,20 +14,12 @@ export function maniatsxPlugin(opts: { rootDir?: string; tsconfigPath?: string }
         const loader = file.endsWith("x") ? ("tsx" as const) : ("ts" as const);
         // Runtime plugins (Bun.plugin) must always return contents, so untouched files pass through as-is
         const untouched = { contents: source, loader };
-        if (file.split(/[\\/]/).includes("node_modules") || !/\.tsx?$/.test(file)) return untouched;
-        if (
-          !ts
-            .preProcessFile(source)
-            .importedFiles.some((item) => item.fileName === "maniatsx/client")
-        )
-          return untouched;
-        const result = compileSource(file, source, { rootDir });
-        const format = (d: (typeof result.diagnostics)[number]) =>
-          `${d.file}:${d.line}:${d.column} ${d.message}`;
+        const result = compilePluginLoad(file, source, rootDir);
+        if (!result) return untouched;
         for (const warning of result.diagnostics.filter((d) => d.severity === "warning"))
-          console.warn(format(warning));
+          console.warn(formatDiagnostic(warning));
         const errors = result.diagnostics.filter((d) => d.severity === "error");
-        if (errors.length) throw new Error(errors.map(format).join("\n"));
+        if (errors.length) throw new Error(errors.map(formatDiagnostic).join("\n"));
         return { contents: result.code, loader };
       });
     },

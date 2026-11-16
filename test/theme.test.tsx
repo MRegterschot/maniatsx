@@ -97,6 +97,41 @@ describe("theme kit", () => {
     ).toBe('<frame><label text="outer-default" /></frame><label text="outer-default" />');
   });
 
+  test("serializes themes as data and resolves data chain, text and layout", () => {
+    const Variant = slot("test/theme/data-variant", () => <label text="default" />, {
+      "theme-test-base": () => <label text="ancestor" />,
+    });
+    const source = kit.defineTheme({
+      id: "theme-test-data",
+      name: "Data",
+      text: { hello: "Data hello" },
+      layout: { card: { anchor: "bottom-right", scale: 2 } },
+    });
+    const data = JSON.parse(JSON.stringify(kit.toData(source)));
+    expect(data).toEqual(kit.toData(source));
+    const Probe = () => (
+      <>
+        <Variant />
+        <label text={kit.useText("hello")} />
+        <frame pos={useLayout("card", { anchor: "center", size: [10, 6] }).pos} />
+      </>
+    );
+    expect(
+      render(
+        <kit.ThemeProvider theme={data}>
+          <Probe />
+        </kit.ThemeProvider>,
+      ),
+    ).toBe('<label text="ancestor" /><label text="Data hello" /><frame pos="140 -78" />');
+    expect(() =>
+      render(
+        <kit.ThemeProvider theme={{ ...data, chain: ["wrong"] }}>
+          <Probe />
+        </kit.ThemeProvider>,
+      ),
+    ).toThrow(/Invalid ThemeData/);
+  });
+
   test("rejects duplicate ids and slot names", () => {
     expect(() => kit.defineTheme({ id: "theme-test-child", name: "Duplicate" })).toThrow(
       /Duplicate theme id/,

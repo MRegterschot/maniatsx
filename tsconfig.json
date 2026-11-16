@@ -21,7 +21,8 @@
       "maniatsx/jsx-dev-runtime": ["./src/jsx-dev-runtime.ts"],
       "maniatsx/client": ["./src/client/index.ts"],
       "maniatsx/theme": ["./src/theme.ts"],
-      "maniatsx/maniascript": ["./src/maniascript/index.ts"]
+      "maniatsx/maniascript": ["./src/maniascript/index.ts"],
+      "maniatsx/esbuild-plugin": ["./src/compiler/esbuild-plugin.ts"]
     }
   },
   "include": ["src", "test", "scripts", "examples", "bench"]
