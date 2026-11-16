@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { renderMapInfo } from "../examples/themed/map-info.tsx";
 import { compact, defaultTheme, midnight } from "../examples/themed/presets.tsx";
+import { paper } from "../examples/themed/presets.tsx";
+import { renderScene } from "../examples/themed/scene.tsx";
 import { extractScripts, parseManiaScript } from "./support/maniascript.ts";
 
 // Goldens and XSD validation come from examples/index.ts; this covers what the themes may change
@@ -35,5 +37,23 @@ describe("themed map info example", () => {
   test("every skin keeps the same ManiaScript", () => {
     const [base, ...rest] = [defaultTheme, midnight, compact].map((t) => script(renderMapInfo(t)));
     for (const other of rest) expect(other).toBe(base!);
+  });
+
+  test("records uses the specified default and compact anchors", () => {
+    expect(renderScene(defaultTheme)).toContain('<frame pos="103 76">');
+    expect(renderScene(compact)).toContain('<frame pos="-158 78" scale="0.8">');
+  });
+
+  test("paper adds accent stripes to panels", () => {
+    const xml = renderScene(paper);
+    expect(xml.match(/size="0.6 [0-9.]+" bgcolor="F60"/g)).toHaveLength(4);
+    expect(xml).toContain('text="Top times"');
+  });
+
+  test("all four scenes keep identical ManiaScript", () => {
+    const scripts = [defaultTheme, midnight, compact, paper].map((theme) =>
+      script(renderScene(theme)),
+    );
+    for (const other of scripts.slice(1)) expect(other).toBe(scripts[0]!);
   });
 });

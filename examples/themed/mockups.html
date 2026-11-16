@@ -1,0 +1,69 @@
+<!doctype html>
+<!-- Hand-drawn design mockups for DESIGN.md; 1 manialink unit = 3 px (960×540 frames) -->
+<html>
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+<style>
+  .frame { position: relative; width: 960px; height: 540px; background: #111; overflow: hidden; font-family: "Segoe UI", Arial, sans-serif; }
+  .w { position: absolute; transform-origin: 0 0; }
+  .abs { position: absolute; white-space: nowrap; line-height: 1; }
+  .icon { font-family: "Font Awesome 6 Free", "Font Awesome 5 Free", sans-serif; font-weight: 900; }
+</style>
+</head>
+<body>
+<div id="frames"></div>
+<script>
+const U = 3, T = 4.5; // px per unit, px per textsize
+const themes = {
+  default: { surface: "#222", alt: "#333", accent: "#4CF", text: "#FFF", muted: "#AAA", op: 0.9, icon: "", title: "Records" },
+  midnight: { surface: "#112", alt: "#223", accent: "#8AF", text: "#DDF", muted: "#89A", op: 0.9, icon: "", title: "Records" },
+  compact: { surface: "#222", alt: "#333", accent: "#4CF", text: "#FFF", muted: "#AAA", op: 0.9, icon: "", title: "Records", compact: true },
+  paper: { surface: "#EEE", alt: "#DDD", accent: "#F60", text: "#222", muted: "#666", op: 0.95, icon: "", title: "Top times", stripe: true },
+};
+const records = [["1", "Wirtual", "0:24.512"], ["2", "Scrapie", "0:24.689"], ["3", "Massa", "0:24.731"], ["4", "Gwen", "0:24.902"], ["5", "You", "0:25.118"]];
+
+const box = (x, y, w, h, css) => `<div class="abs" style="left:${x * U}px;top:${y * U}px;width:${w * U}px;height:${h * U}px;${css}"></div>`;
+const text = (x, y, size, color, str, { bold, right, icon, vcenter, h } = {}) => {
+  const top = vcenter ? (y - h / 2) * U : y * U;
+  const pos = right ? `right:${(55 - x) * U}px` : `left:${x * U}px`;
+  const height = vcenter ? `height:${h * U}px;display:flex;align-items:center;` : "";
+  return `<div class="abs${icon ? " icon" : ""}" style="${pos};top:${top}px;${height}font-size:${size * T}px;color:${color};font-weight:${bold ? 600 : 400}">${str}</div>`;
+};
+// ui/panel: thin variant in compact, accent stripe in paper
+const panel = (t, x, y, w, h) =>
+  box(x, y, w, h, `background:${t.compact ? t.alt : t.surface};opacity:${t.compact ? 0.72 : t.op}`) +
+  (t.stripe ? box(x, y, 0.6, h, `background:${t.accent}`) : "");
+
+function mapInfo(t) {
+  const [x, y, s] = t.compact ? [-160 + 2, 90 - 2, 0.8] : [160 - 55 - 2, 90 - 2, 1];
+  const body = t.compact
+    ? text(2, 4, 2, t.text, t.icon, { icon: true, vcenter: true, h: 0 }) + text(8, 4, 2, t.text, "A01 - Green Plains", { bold: true, vcenter: true, h: 0 }) + text(35, 4, 1, t.muted, "Nadeo", { vcenter: true, h: 0 })
+    : text(2, 2, 3, t.text, t.icon, { icon: true }) + text(10, 2, 3, t.text, "A01 - Green Plains", { bold: true }) + text(10, 6, 1, t.muted, "Nadeo");
+  return `<div class="w" style="left:${(x + 160) * U}px;top:${(90 - y) * U}px;width:${55 * U}px;height:${10 * U}px;transform:scale(${s})">${panel(t, 0, 0, 55, 10)}${body}</div>`;
+}
+
+function recordsWidget(t) {
+  const [x, y, s] = t.compact ? [-160 + 2, 90 - 12, 0.8] : [160 - 55 - 2, 90 - 14, 1];
+  let html = panel(t, 0, 0, 55, 5) + panel(t, 0, 5, 55, 23.5);
+  html += text(2, 2.5, 1.5, t.text, t.title, { bold: true, vcenter: true, h: 5 });
+  html += text(53, 2.5, 1, t.muted, "5", { right: true, vcenter: true, h: 5 });
+  records.forEach(([rank, name, time], i) => {
+    const top = 5.5 + i * 4.6, mid = top + 2.3, you = name === "You";
+    if (i % 2 === 0) html += box(0, top, 55, 4.6, `background:${t.alt};opacity:0.5`);
+    if (you) html += box(0, top, 0.6, 4.6, `background:${t.accent}`);
+    html += text(2, mid, 1, t.muted, rank, { vcenter: true, h: 4.6 });
+    html += text(7, mid, 1, you ? t.accent : t.text, name, { vcenter: true, h: 4.6 });
+    html += text(53, mid, 1, i === 0 ? t.accent : t.text, time, { bold: true, right: true, vcenter: true, h: 4.6 });
+  });
+  return `<div class="w" style="left:${(x + 160) * U}px;top:${(90 - y) * U}px;width:${55 * U}px;height:${28.5 * U}px;transform:scale(${s})">${html}</div>`;
+}
+
+const only = new URLSearchParams(location.search).get("theme");
+document.getElementById("frames").innerHTML = Object.entries(themes)
+  .filter(([name]) => !only || name === only)
+  .map(([name, t]) => `<h3 style="font:14px sans-serif;color:#888">${name}</h3><div class="frame" data-theme="${name}">${mapInfo(t)}${recordsWidget(t)}</div>`)
+  .join("");
+</script>
+</body>
+</html>

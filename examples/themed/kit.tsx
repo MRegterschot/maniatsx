@@ -14,7 +14,7 @@ export const kit = createThemeKit<Tokens>({
   name: "Default",
   tokens: {
     color: { surface: "222", surfaceAlt: "333", accent: "4CF", text: "FFF", textMuted: "AAA" },
-    font: { body: "GameFont", title: "GameFontBold" },
+    font: { body: "GameFontRegular", title: "GameFontSemiBold" },
     size: { sm: 1, md: 2, lg: 3 },
     opacity: { panel: 0.9 },
   },
@@ -22,16 +22,17 @@ export const kit = createThemeKit<Tokens>({
 });
 
 export interface PanelProps {
+  pos?: Vec2;
   size: Vec2;
   children?: Node;
   variant?: "default" | "thin";
 }
 export const Panel = slot<PanelProps>(
   "ui/panel",
-  function DefaultPanel({ size, children, variant }) {
+  function DefaultPanel({ pos, size, children, variant }) {
     const t = kit.useTokens();
     return (
-      <frame size={size}>
+      <frame pos={pos} size={size}>
         <quad
           size={size}
           bgcolor={variant === "thin" ? t.color.surfaceAlt : t.color.surface}
