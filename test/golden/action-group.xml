@@ -2,10 +2,10 @@
 <manialink id="action-group-widget" name="TMCP:action-group-widget" version="3">
   <frame id="widget" pos="-156 85" z-index="10" hidden="1">
     <frame pos="0 0" size="20 5" z-index="10">
-      <frame size="20 5" pos="-15 0">
+      <frame size="20 5" pos="-15 0" id="mtx-1">
         <frame pos="15 0" size="5 5">
           <quad size="5 5" bgcolor="222" />
-          <label pos="2.6 -2.15" text="" halign="center" valign="center" textsize="2.5" textcolor="DDD" />
+          <label pos="2.6 -2.15" text="" halign="center" valign="center" textsize="2.5" textcolor="DDD" id="mtx-2" />
         </frame>
         <frame pos="0 0" size="5 5">
           <quad size="5 5" bgcolor="DDD" action="open-maps" />
@@ -19,7 +19,7 @@
           <quad size="5 5" bgcolor="DDD" action="open-settings" />
           <label pos="2.5 -2.1" text="" halign="center" valign="center" textsize="2" textcolor="222" />
         </frame>
-        <quad class="trigger" pos="15 0" z-index="2" size="5 5" bgcolor="222" opacity="0" scriptevents="1" />
+        <quad pos="15 0" z-index="2" size="5 5" bgcolor="222" opacity="0" id="mtx-3" scriptevents="1" />
       </frame>
     </frame>
   </frame>
@@ -29,33 +29,38 @@
 #Include "TimeLib" as TimeLib
 #Include "ColorLib" as CL
 declare CMlFrame widget;
-Void Mtx_Noop() {}
+declare Boolean Mtx_Dirty;
+declare Boolean Mtx_S1;
+declare CMlFrame Mtx_R1;
+declare CMlLabel Mtx_R2;
+Void Mtx_H1() {
+declare CAnimManager::EAnimManagerEasing ease = CAnimManager::EAnimManagerEasing::ExpInOut;
+if (Mtx_S1) {
+  AnimMgr.Add(Mtx_R1, "<frame pos='" ^ -15. ^ " 0' />", 200, ease);
+  AnimMgr.Add(Mtx_R2, "<label rot='0' pos='2.6 -2.15' />", 200, ease);
+} else {
+  AnimMgr.Add(Mtx_R1, "<frame pos='0 0' />", 200, ease);
+  AnimMgr.Add(Mtx_R2, "<label rot='180' pos='2.25 -2.9' />", 200, ease);
+}
+Mtx_S1 = !Mtx_S1;
+Mtx_Dirty = True;
+}
 main() {
+  Mtx_R1 <=> (Page.MainFrame.GetFirstChild("mtx-1") as CMlFrame);
+  Mtx_R2 <=> (Page.MainFrame.GetFirstChild("mtx-2") as CMlLabel);
+  Mtx_S1 = False;
   widget <=> (Page.MainFrame.GetFirstChild("widget") as CMlFrame);
 
   sleep(300);
   widget.Show();
-  declare Boolean actionGroupIsOpen for This = false;
+  Mtx_Dirty = True;
   while (True) {
     yield;
     foreach (Event in PendingEvents) {
       if (Event.Control == Null) continue;
-      if (Event.Control.HasClass("trigger") && Event.Type == CMlScriptEvent::Type::MouseClick) {
-        declare Boolean actionGroupIsOpen for This;
-
-        if (actionGroupIsOpen) {
-          AnimMgr.Add(Event.Control.Parent, """<frame pos='-15 0' />""", 200, CAnimManager::EAnimManagerEasing::ExpInOut);
-          declare triggerIcon <=> ((Event.Control.Parent.Controls[0] as CMlFrame).Controls[1] as CMlLabel);
-          AnimMgr.Add(triggerIcon, """<label rot='0' pos='2.6 -2.15' />""", 200, CAnimManager::EAnimManagerEasing::ExpInOut);
-        } else {
-          AnimMgr.Add(Event.Control.Parent, """<frame pos='0 0' />""", 200, CAnimManager::EAnimManagerEasing::ExpInOut);
-          declare triggerIcon <=> ((Event.Control.Parent.Controls[0] as CMlFrame).Controls[1] as CMlLabel);
-          AnimMgr.Add(triggerIcon, """<label rot='180' pos='2.25 -2.9' />""", 200, CAnimManager::EAnimManagerEasing::ExpInOut);
-        }
-
-        actionGroupIsOpen = !actionGroupIsOpen;
-      }
+      if (Event.Type == CMlScriptEvent::Type::MouseClick && Event.ControlId == "mtx-3") Mtx_H1();
     }
+    Mtx_Dirty = False;
   }
 }
 --></script>

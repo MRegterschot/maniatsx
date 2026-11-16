@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<manialink id="map-info" version="3">
+  <frame pos="-158 88" scale="0.8">
+    <frame size="55 10">
+      <quad size="55 10" bgcolor="333" opacity="0.72" />
+      <label pos="2 -4" text="▣" textsize="2" textfont="GameFontBold" textcolor="FFF" />
+      <label pos="8 -4" text="A01 - Green Plains" textsize="2" textfont="GameFontBold" textcolor="FFF" id="mtx-1" />
+      <label pos="35 -4" text="Nadeo" textsize="1" textfont="GameFont" textcolor="AAA" id="mtx-2" />
+    </frame>
+  </frame>
+  <script><!--
+declare CMlLabel Mtx_R1;
+declare CMlLabel Mtx_R2;
+Void Mtx_Noop() {}
+main() {
+  Mtx_R1 <=> (Page.MainFrame.GetFirstChild("mtx-1") as CMlLabel);
+  Mtx_R2 <=> (Page.MainFrame.GetFirstChild("mtx-2") as CMlLabel);
+  Mtx_R1.Value = "A01 - Green Plains";
+  Mtx_R2.Value = "Nadeo";
+  while (True) {
+    yield;
+  }
+}
+--></script>
+</manialink>
