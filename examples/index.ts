@@ -10,8 +10,9 @@ import { compact, defaultTheme, midnight } from "./themed/presets.tsx";
 // Name -> renderer; the golden files in test/golden are named after the keys.
 export const examples: Record<string, (options?: RenderOptions) => string> = {
   "action-group": renderActionGroup,
-  "shared-data": renderSharedData,
+  // Update page first: shared values outlive layers, so the visual test needs a known state
   "shared-data-update": renderSharedDataUpdate,
+  "shared-data": renderSharedData,
   widget: renderWidget,
   window: renderWindow,
   "themed-default": (options) => renderMapInfo(defaultTheme, options),

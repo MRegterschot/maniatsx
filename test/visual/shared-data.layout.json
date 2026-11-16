@@ -1,0 +1,104 @@
+[
+  {
+    "children": [
+      {
+        "opacity": 1,
+        "pos": [
+          -160,
+          80
+        ],
+        "type": "quad",
+        "z": 0,
+        "scale": 1,
+        "size": [
+          50,
+          14
+        ],
+        "bgColor": [
+          0,
+          0,
+          0
+        ],
+        "visible": true
+      },
+      {
+        "id": "mtx-1",
+        "opacity": 1,
+        "pos": [
+          -158,
+          78
+        ],
+        "type": "label",
+        "z": 0,
+        "scale": 1,
+        "size": [
+          0,
+          0
+        ],
+        "visible": true,
+        "textColor": [
+          -1,
+          -1,
+          -1
+        ],
+        "text": "A01 - Green Plains"
+      },
+      {
+        "id": "mtx-2",
+        "opacity": 1,
+        "pos": [
+          -158,
+          74
+        ],
+        "type": "label",
+        "z": 0,
+        "scale": 1,
+        "size": [
+          0,
+          0
+        ],
+        "visible": true,
+        "textColor": [
+          -1,
+          -1,
+          -1
+        ],
+        "text": "by Nadeo, 25s"
+      },
+      {
+        "id": "mtx-3",
+        "opacity": 1,
+        "pos": [
+          -158,
+          70
+        ],
+        "type": "label",
+        "z": 0,
+        "scale": 1,
+        "size": [
+          0,
+          0
+        ],
+        "visible": true,
+        "textColor": [
+          -1,
+          -1,
+          -1
+        ],
+        "text": "updates: 1"
+      }
+    ],
+    "pos": [
+      -160,
+      80
+    ],
+    "type": "frame",
+    "z": 0,
+    "scale": 1,
+    "size": [
+      100,
+      100
+    ],
+    "visible": true
+  }
+]

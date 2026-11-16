@@ -81,4 +81,4 @@ T13 measurement: 47,108-byte bundle; QuickJS evaluation 14.35 ms; three preset r
 | QuickJS memory/time limits with a bigger render runtime | T13 measures it; maniatsx has no deps and renders by string concatenation |
 | Two JSX runtimes in one monorepo | per-package `jsxImportSource`; G1 typechecks both |
 | Presets drift from plugin skins | slot variant fallback; visual tests per preset in the plugins repo |
-| Game semantics of `for This` across pages | in-game check with the visual runner before T12 is relied on |
+| Game semantics of `for This` across pages | Checked in game 2026-11-16: shared across layers, survives a re-send, and outlives the layer (a later page sees the last published value). Namespace shared keys per plugin (`<pluginId>.<key>`) so stale values from another plugin or an earlier session can't leak in |
