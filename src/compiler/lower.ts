@@ -450,6 +450,7 @@ export class Lowerer {
       (ts.isPrefixUnaryExpression(e) || ts.isPostfixUnaryExpression(e)) &&
       (e.operator === ts.SyntaxKind.PlusPlusToken || e.operator === ts.SyntaxKind.MinusMinusToken)
     ) {
+      if (this.readOnlyShared(e, e.operand)) return;
       const target = this.val(e.operand);
       const op = e.operator === ts.SyntaxKind.PlusPlusToken ? "+=" : "-=";
       out.line(target.items, " ", op, " 1;");
@@ -457,6 +458,13 @@ export class Lowerer {
       return;
     }
     if (ts.isCallExpression(e)) {
+      const mutator = unparen(e.expression);
+      if (
+        ts.isPropertyAccessExpression(mutator) &&
+        ["push", "splice"].includes(mutator.name.text) &&
+        this.readOnlyShared(e, mutator.expression)
+      )
+        return;
       const r = this.lowerCall(e, undefined);
       out.line(r.items, ";");
       const callee = unparen(e.expression);
@@ -487,6 +495,7 @@ export class Lowerer {
       this.bad(target, "destructuring", "Destructuring assignment");
       return;
     }
+    if (this.readOnlyShared(e, target)) return;
     const root = this.rootIdentifier(target);
     if (root) {
       const k = this.a.classify(root, this.closure);
@@ -541,7 +550,10 @@ export class Lowerer {
         const key = e.name.text;
         if (key === "value" || key === "control") {
           const ty = this.quietly(() => this.lower(receiver).ty);
-          if (typeof ty === "object" && (key === "value" ? "state" in ty : "ref" in ty))
+          if (
+            typeof ty === "object" &&
+            (key === "value" ? "state" in ty || "shared" in ty : "ref" in ty)
+          )
             return true;
         }
         e = unparen(e.expression);
@@ -563,6 +575,33 @@ export class Lowerer {
         e = unparen(e.expression);
       else return false;
     }
+  }
+
+  // True when the chain passes `.value` of a client.shared handle, which is read-only
+  private sharedRooted(expr: ts.Expression): boolean {
+    let e = unparen(expr);
+    for (;;) {
+      if (ts.isPropertyAccessExpression(e)) {
+        const receiver = e.expression;
+        if (e.name.text === "value") {
+          const t = this.quietly(() => this.lower(receiver).ty);
+          if (typeof t === "object" && "shared" in t) return true;
+        }
+        e = unparen(receiver);
+      } else if (ts.isElementAccessExpression(e) || ts.isNonNullExpression(e))
+        e = unparen(e.expression);
+      else return false;
+    }
+  }
+
+  private readOnlyShared(node: ts.Node, target: ts.Expression): boolean {
+    if (!this.sharedRooted(target)) return false;
+    this.err(
+      node,
+      "assign-shared",
+      `\`${this.snippet(target)}\` is a client.shared value and is read-only in client code. Write it from the server side with <Publish to={...} value={...} />.`,
+    );
+    return true;
   }
 
   private isState(expr: ts.Expression): boolean {
@@ -866,11 +905,14 @@ export class Lowerer {
   // Lowers an expression that must be a plain value (not a state/fn/action handle)
   private val(node: ts.Expression, expected?: Ty): E {
     const e = this.lower(node, expected);
-    if (typeof e.ty === "object" && ("state" in e.ty || "ref" in e.ty || "fn" in e.ty)) {
+    if (
+      typeof e.ty === "object" &&
+      ("state" in e.ty || "shared" in e.ty || "ref" in e.ty || "fn" in e.ty)
+    ) {
       this.err(
         node,
         "handle",
-        `\`${this.snippet(node)}\` is a client handle, not a value. ${"state" in e.ty ? "Read or write `.value`." : "ref" in e.ty ? "Use `.control`." : "Call it."}`,
+        `\`${this.snippet(node)}\` is a client handle, not a value. ${"state" in e.ty ? "Read or write `.value`." : "shared" in e.ty ? "Read `.value`." : "ref" in e.ty ? "Use `.control`." : "Call it."}`,
       );
     } else if (e.ty === "Action") {
       this.err(
@@ -1049,6 +1091,8 @@ export class Lowerer {
         return atom("NullId", "Ident");
       case "state":
         return { items: [{ kind: "state", expr: node.text }], ty: k.ty, prec: ATOM };
+      case "shared":
+        return { items: [{ kind: "shared", expr: node.text }], ty: k.ty, prec: ATOM };
       case "ref":
         return { items: [{ kind: "ref", expr: node.text }], ty: k.ty, prec: ATOM };
       case "fn":
@@ -1197,6 +1241,9 @@ export class Lowerer {
       if (typeof recv.ty === "object" && "state" in recv.ty) {
         return { items: recv.items, ty: recv.ty.state, prec: ATOM };
       }
+      if (typeof recv.ty === "object" && "shared" in recv.ty) {
+        return { items: recv.items, ty: recv.ty.shared, prec: ATOM };
+      }
     }
 
     if (name === "control") {
@@ -1216,6 +1263,8 @@ export class Lowerer {
       const ty = sym ? this.a.declTy(sym, node) : "Void";
       if (typeof ty === "object" && "state" in ty)
         return { items: [{ kind: "state", expr: node.getText() }], ty, prec: ATOM };
+      if (typeof ty === "object" && "shared" in ty)
+        return { items: [{ kind: "shared", expr: node.getText() }], ty, prec: ATOM };
       if (typeof ty === "object" && "ref" in ty)
         return { items: [{ kind: "ref", expr: node.getText() }], ty, prec: ATOM };
       if (typeof ty === "object" && "fn" in ty)
@@ -1617,7 +1666,7 @@ export class Lowerer {
         node,
         "nested",
         "A client construct inside client code",
-        "client.state/handler/bind/fn/onInit/onFrame must be called outside closures.",
+        "client.state/shared/watch/handler/bind/fn/onInit/onFrame must be called outside closures.",
       );
     }
     if (isActionFactoryCall(this.checker, node)) {
@@ -1805,6 +1854,9 @@ export class Lowerer {
     }
     if (typeof recv.ty === "object" && "state" in recv.ty) {
       return this.bad(node, "handle", `\`.${name}\` on a state handle`, "Use `.value`.");
+    }
+    if (typeof recv.ty === "object" && "shared" in recv.ty) {
+      return this.bad(node, "handle", `\`.${name}\` on a shared handle`, "Use `.value`.");
     }
     if (typeof recv.ty === "object" && "ref" in recv.ty) {
       return this.bad(node, "handle", `\`.${name}\` on a ref handle`, "Use `.control`.");

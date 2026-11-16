@@ -12,7 +12,15 @@ const ALIAS = /^[A-Za-z_]\w*$/;
 const DIRTY_MARK = "\0dirty\0";
 
 type Slot =
-  "structs" | "globals" | "functions" | "refInit" | "stateInit" | "main" | "events" | "loop";
+  | "structs"
+  | "globals"
+  | "functions"
+  | "refInit"
+  | "stateInit"
+  | "main"
+  | "events"
+  | "sync"
+  | "loop";
 
 /** Script source: a string, `ms` code, or arrays of those. Nullish and `false` are skipped. */
 export type ScriptCode = string | MsCode | false | null | undefined | readonly ScriptCode[];
@@ -90,6 +98,7 @@ function createScope(): ScriptScope {
       stateInit: [],
       main: [],
       events: [],
+      sync: [],
       loop: [],
     },
     rawScript: false,
@@ -203,7 +212,7 @@ function indentBlock(parts: Part[], spaces: number): string[] {
 function assemble(scope: ScriptScope, manialinkId: string): string | null {
   for (const lib of scope.libs) if (!scope.includes.has(lib)) addInclude(scope, lib, lib);
 
-  const { structs, globals, functions, refInit, stateInit, main, events, loop } = scope.slots;
+  const { structs, globals, functions, refInit, stateInit, main, events, sync, loop } = scope.slots;
   const count =
     scope.includes.size +
     structs.length +
@@ -213,6 +222,7 @@ function assemble(scope: ScriptScope, manialinkId: string): string | null {
     stateInit.length +
     main.length +
     events.length +
+    sync.length +
     loop.length;
   if (count === 0) return null;
   if (scope.rawScript) {
@@ -237,7 +247,7 @@ function assemble(scope: ScriptScope, manialinkId: string): string | null {
   if (events.length > 0) {
     lines.push("    foreach (Event in PendingEvents) {", ...indentBlock(events, 6), "    }");
   }
-  lines.push(...indentBlock(loop, 4), "  }", "}");
+  lines.push(...indentBlock(sync, 4), ...indentBlock(loop, 4), "  }", "}");
   // Without bindings nothing reads the flag, so its writes (one statement per line) go away
   const kept = scope.dirtyWrites ? lines : lines.filter((line) => line.trim() !== DIRTY_MARK);
   return kept

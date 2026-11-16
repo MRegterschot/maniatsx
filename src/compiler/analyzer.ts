@@ -6,9 +6,12 @@ export interface Sink {
   report(node: ts.Node, code: string, message: string, severity?: "error" | "warning"): void;
 }
 
-export type AuthoringKind = "state" | "ref" | "handler" | "bind" | "fn" | "onInit" | "onFrame";
+export type AuthoringKind =
+  "state" | "shared" | "watch" | "ref" | "handler" | "bind" | "fn" | "onInit" | "onFrame";
 const AUTHORING_KINDS = new Set<string>([
   "state",
+  "shared",
+  "watch",
   "ref",
   "handler",
   "bind",
@@ -73,7 +76,7 @@ export type RootKind =
   | { k: "ml" | "client" | "actionFn" | "nullId" | "apiValue" | "unknown" }
   | { k: "lib" | "vecCtor" | "global"; name: string }
   | { k: "function" }
-  | { k: "state" | "ref" | "fn" | "action" | "capture"; ty: Ty };
+  | { k: "state" | "shared" | "ref" | "fn" | "action" | "capture"; ty: Ty };
 
 const GLOBAL_NAMES = new Set(["Math", "console", "Object", "Array", "Date", "JSON", "undefined"]);
 
@@ -211,6 +214,7 @@ export class Analyzer {
     }
     if (decl && (inAuthoring(decl) || inContract(decl))) {
       if (name === "ClientState") return { state: this.tyFromTypeNode(args?.[0], at) };
+      if (name === "ClientShared") return { shared: this.tyFromTypeNode(args?.[0], at) };
       if (name === "ClientRef") return { ref: this.tyFromTypeNode(args?.[0], at) };
       if (name === "Action" || name === "ClientAction") return "Action";
     }
@@ -404,6 +408,7 @@ export class Analyzer {
       if (init && ts.isCallExpression(init)) {
         const kind = authoringCallKind(this.checker, init);
         if (kind === "state") return { state: this.stateArgTy(init, at) };
+        if (kind === "shared") return { shared: this.stateArgTy(init, at, 1) };
         if (kind === "ref") return { ref: this.refClassTy(init, at) };
         if (kind === "fn") return { fn: this.fnSig(init, decl) };
         if (isActionFactoryCall(this.checker, init)) return "Action";
@@ -473,10 +478,11 @@ export class Analyzer {
     return "Void";
   }
 
-  stateArgTy(call: ts.CallExpression, at: ts.Node): Ty {
+  // `argIndex` is the position of the initial value (1 for client.shared, which takes the key first)
+  stateArgTy(call: ts.CallExpression, at: ts.Node, argIndex = 0): Ty {
     const explicit = call.typeArguments?.[0];
     if (explicit) return this.tyFromTypeNode(explicit, at);
-    const arg = call.arguments[0];
+    const arg = call.arguments[argIndex];
     if (!arg) return this.fail(call, "state-type", "client.state needs an initial value.");
     const e = unparen(arg);
     if (ts.isIdentifier(e) || ts.isPropertyAccessExpression(e)) {
@@ -488,7 +494,7 @@ export class Analyzer {
       this.report(
         call,
         "bare-number",
-        "Cannot tell whether this client.state holds an Integer or a Real. Give it a type argument, for example `client.state<Integer>(0)`.",
+        'Cannot tell whether this client.state holds an Integer or a Real. Give it a type argument, for example `client.state<Integer>(0)` or `client.shared<Integer>("key", 0)`.',
       );
       return "Integer";
     }
@@ -601,6 +607,7 @@ export class Analyzer {
     }
     const ty = this.declTy(sym, id);
     if (typeof ty === "object" && "state" in ty) return { k: "state", ty };
+    if (typeof ty === "object" && "shared" in ty) return { k: "shared", ty };
     if (typeof ty === "object" && "ref" in ty) return { k: "ref", ty };
     if (typeof ty === "object" && "fn" in ty) return { k: "fn", ty };
     if (ty === "Action") return { k: "action", ty };

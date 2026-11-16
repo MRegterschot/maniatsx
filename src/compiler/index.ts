@@ -1,9 +1,9 @@
 import ts from "typescript6";
 import path from "node:path";
-import type { CompiledCode } from "../client/contract.ts";
+import type { CompiledCode, MsType } from "../client/contract.ts";
 import { Analyzer, authoringCallKind, unparen } from "./analyzer.ts";
 import { Lowerer } from "./lower.ts";
-import { toMs } from "./ty.ts";
+import { toMs, type Ty } from "./ty.ts";
 import { joinItems, type CompileDiagnostic, type HoleSpec, type Item } from "./util.ts";
 
 export type { CompileDiagnostic } from "./util.ts";
@@ -66,6 +66,55 @@ function transform(program: ts.Program, files: readonly ts.SourceFile[], root: s
             const options = stateOptions(analyzer, node.arguments[1]);
             if (type && options !== null)
               replacement = `__mtx.state(${JSON.stringify(type)}, ${descriptor([{ kind: "value", type, expr: arg.getText(file) }])}, ${JSON.stringify(site)}${options ? `, ${JSON.stringify(options)}` : ""})`;
+          } else if (kind === "shared") {
+            const key = arg && unparen(arg);
+            if (!key || !ts.isStringLiteralLike(key))
+              analyzer.report(
+                arg ?? node,
+                "shared-key",
+                'client.shared needs a string literal key as its first argument, for example `client.shared<Integer>("count", 0)`.',
+              );
+            else if (!/^[A-Za-z]\w*$/.test(key.text) || /_(V|Seen)$/.test(key.text))
+              analyzer.report(
+                key,
+                "shared-key",
+                "A client.shared key may only contain letters, digits and `_`, must start with a letter and must not end in `_V` or `_Seen`.",
+              );
+            else if (!node.arguments[1])
+              analyzer.report(node, "shared-initial", "client.shared needs an initial value.");
+            else {
+              const tracked = analyzer.trackStructs(() => {
+                const ty = analyzer.stateArgTy(node, node, 1);
+                analyzer.trackNote(ty);
+                return ty;
+              });
+              const type = msWithFields(analyzer, tracked.result);
+              if (type)
+                replacement = `__mtx.shared(${JSON.stringify(key.text)}, ${JSON.stringify(type)}, ${descriptor([{ kind: "value", type, expr: node.arguments[1].getText(file) }], tracked.structs)}, ${JSON.stringify(site)})`;
+              else
+                analyzer.report(
+                  node,
+                  "shared-type",
+                  "This client.shared type cannot be written as a ManiaScript literal.",
+                );
+            }
+          } else if (kind === "watch") {
+            const closure = node.arguments[1] && unparen(node.arguments[1]);
+            if (
+              !arg ||
+              !closure ||
+              !(ts.isArrowFunction(closure) || ts.isFunctionExpression(closure))
+            )
+              analyzer.report(
+                node,
+                "closure",
+                "client.watch expects a shared handle and a function expression.",
+              );
+            else {
+              const lowerer = new Lowerer(analyzer, closure, "handler");
+              const tracked = analyzer.trackStructs(() => lowerer.lowerStatements());
+              replacement = `__mtx.watch(${arg.getText(file)}, ${descriptor(tracked.result, tracked.structs)})`;
+            }
           } else if (arg) {
             const closure = unparen(arg);
             if (ts.isArrowFunction(closure) || ts.isFunctionExpression(closure)) {
@@ -143,6 +192,33 @@ function transform(program: ts.Program, files: readonly ts.SourceFile[], root: s
     output.set(file.fileName, text);
   }
   return { output, diagnostics };
+}
+
+// Like toMs, but structs carry their fields so the runtime can emit a struct literal
+function msWithFields(analyzer: Analyzer, ty: Ty, depth = 0): MsType | undefined {
+  if (typeof ty === "object" && depth < 8) {
+    if ("struct" in ty) {
+      const fields = [];
+      for (const f of analyzer.structFields(ty.struct) ?? []) {
+        const type = msWithFields(analyzer, f.ty, depth + 1);
+        if (!type) return undefined;
+        fields.push({ name: f.name, type });
+      }
+      return { struct: ty.struct, fields };
+    }
+    if ("array" in ty) {
+      const inner = msWithFields(analyzer, ty.array, depth + 1);
+      return inner && { array: inner };
+    }
+    if ("record" in ty) {
+      const base = toMs(ty);
+      const value = msWithFields(analyzer, ty.record.value, depth + 1);
+      return base && value && typeof base === "object" && "record" in base
+        ? { record: { key: base.record.key, value } }
+        : undefined;
+    }
+  }
+  return toMs(ty);
 }
 
 // Options must be literals so the compiler can bake them in; null means an error was reported

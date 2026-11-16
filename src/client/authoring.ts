@@ -7,6 +7,7 @@ import {
   type ClientFn,
   type ClientHandler,
   type ClientRef,
+  type ClientShared,
   type ClientState,
   type ClientStateOptions,
 } from "./contract.ts";
@@ -32,6 +33,18 @@ export const client = {
     void initial;
     void options;
     return notCompiled("client.state");
+  },
+  // Value written by an update page (<Publish>) and read here; the key is a literal and names the `for This` variable
+  shared<T>(key: string, initial: T): ClientShared<T> {
+    void key;
+    void initial;
+    return notCompiled("client.shared");
+  },
+  // Runs `body` when the shared value changes (and once at init if it was already published)
+  watch<T>(shared: ClientShared<T>, body: () => void): void {
+    void shared;
+    void body;
+    notCompiled("client.watch");
   },
   // Handle to a control: pass it as `ref` to an element, read `.control` in client code. The type argument is required
   ref<T extends CMlControl>(): ClientRef<T> {

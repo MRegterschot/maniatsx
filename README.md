@@ -81,6 +81,27 @@ Alternatively, run `maniatsx-compile --project tsconfig.json --out compiled`. It
 
 `client.state<boolean>(false, { persist: true })` keeps the value when the page is sent again with the same manialink id (it compiles to `declare … for Page`); the initial value only applies the first time. The options must be literals. The storage name derives from the source position, so moving the call resets the stored value; pass `key: "open"` to pin it.
 
+### Shared data for update pages
+
+A data-driven widget is a main page plus a small update page that is re-sent with new data. `client.shared<T>(key, initial)` declares the value once, in a module both pages import. The update page writes it with `<Publish>`; the main page reads `.value` in bindings, handlers, `client.fn` and lifecycle code, and `client.watch` runs client code when it changes:
+
+```tsx
+export const mapInfo = client.shared<MapInfo>("map_info", { name: "", author: "" });
+
+// main page
+<label text={client.bind(() => mapInfo.value.name)} />;
+client.watch(mapInfo, () => {
+  /* runs on every update */
+});
+
+// update page: send only this
+<Manialink id="map-info-update">
+  <Publish to={mapInfo} value={data} />
+</Manialink>;
+```
+
+It compiles to `declare … for This` variables plus a version counter that `<Publish>` bumps; the main page compares the version each frame and refreshes its bindings. `.value` is read-only in client code, `key` must be a literal (letters, digits and `_`, not ending in `_V` or `_Seen`), and `T` must be a ManiaScript type (primitives, vectors, arrays, records, interfaces as structs). See `examples/shared-data.tsx`.
+
 ### Client refs
 
 `client.state`, `client.handler` and `client.bind` provide client values, event handlers and bindings. Refs let client code target rendered elements, including elements supplied by another component:

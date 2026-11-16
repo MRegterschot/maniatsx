@@ -1,12 +1,14 @@
 import { ms } from "../ms.ts";
 import { useRenderScope } from "../render.ts";
 import { installClientExtension, type ClientHost } from "../manialink.tsx";
+import type { Node } from "../vnode.ts";
 import {
   CLIENT,
   type ClientBinding,
   type ClientFn,
   type ClientHandler,
   type ClientRef,
+  type ClientShared,
   type ClientState,
   type ClientStateOptions,
   type CompiledCode,
@@ -23,19 +25,47 @@ function typeName(type: MsType): string {
   if ("record" in type) return `${typeName(type.record.value)}[${type.record.key}]`;
   return type.struct;
 }
-function literal(value: unknown, type: MsType): string {
+function emptyCollection(type: MsType, inner: boolean): string {
+  if (inner)
+    throw new TypeError(
+      `An empty ${typeName(type)} cannot be written inside an array or record literal`,
+    );
+  return typeName(type);
+}
+const isEmptyCollection = (value: unknown, type: MsType) =>
+  typeof type === "object" &&
+  (("array" in type && Array.isArray(value) && value.length === 0) ||
+    ("record" in type &&
+      !!value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      Object.keys(value).length === 0));
+// `inner` is true inside array/record literals, where the game's parser has no typed empty collection
+function literal(value: unknown, type: MsType, inner = false): string {
   if (typeof type !== "string") {
-    if ("struct" in type) throw new Error("struct values are not supported yet");
-    if ("array" in type) {
-      if (!Array.isArray(value) || !value.length) throw new TypeError("Expected a non-empty array");
-      return `[${value.map((v) => literal(v, type.array)).join(", ")}]`;
+    if ("struct" in type) {
+      if (!type.fields) throw new Error("struct values are not supported yet");
+      if (!value || typeof value !== "object" || Array.isArray(value))
+        throw new TypeError(`Expected ${type.struct} value`);
+      // Empty collections are the field default, and `field = Integer[]` is not valid in a struct literal
+      const fields = type.fields
+        .map((f) => [f, (value as Record<string, unknown>)[f.name]] as const)
+        .filter(([f, v]) => !isEmptyCollection(v, f.type))
+        .map(([f, v]) => `${f.name} = ${literal(v, f.type)}`);
+      return fields.length ? `${type.struct} { ${fields.join(", ")} }` : `${type.struct} {}`;
     }
-    if (!value || typeof value !== "object" || Array.isArray(value) || !Object.keys(value).length)
-      throw new TypeError("Expected a non-empty record");
+    if ("array" in type) {
+      if (!Array.isArray(value)) throw new TypeError("Expected an array");
+      if (!value.length) return emptyCollection(type, inner);
+      return `[${value.map((v) => literal(v, type.array, true)).join(", ")}]`;
+    }
+    if (!value || typeof value !== "object" || Array.isArray(value))
+      throw new TypeError("Expected a record");
+    if (!Object.keys(value).length) return emptyCollection(type, inner);
     return `[${Object.entries(value)
       .map(
         ([k, v]) =>
-          `${literal(type.record.key === "Integer" ? Number(k) : k, type.record.key)} => ${literal(v, type.record.value)}`,
+          `${literal(type.record.key === "Integer" ? Number(k) : k, type.record.key)} => ${literal(v, type.record.value, true)}`,
       )
       .join(", ")}]`;
   }
@@ -70,6 +100,23 @@ function hash(text: string): string {
   for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
   return (h >>> 0).toString(16).padStart(8, "0");
 }
+// Keys name `for This` variables shared across pages; the suffixes are taken by the version and last-seen variables
+const SHARED_KEY = /^[A-Za-z]\w*$/;
+const SHARED_SUFFIX = /_(V|Seen)$/;
+export function checkSharedKey(key: string, site: string): void {
+  if (!SHARED_KEY.test(key) || SHARED_SUFFIX.test(key))
+    throw new Error(
+      `client.shared at ${site}: invalid key ${JSON.stringify(key)}; use letters, digits and "_", starting with a letter and not ending in _V or _Seen`,
+    );
+}
+interface SharedInfo {
+  shared: ClientShared;
+  name: string;
+  read: boolean;
+  published: boolean;
+  // Functions run (in order) when the version changes
+  watchers: string[];
+}
 // Matches the compiler's `Mtx_Dirty = True;` statements so they can be dropped on pages without bindings
 const DIRTY_WRITE = /\bMtx_Dirty = True;/g;
 export class ClientScope {
@@ -77,7 +124,8 @@ export class ClientScope {
   private persistedNames = new Set<string>();
   private stateCount = 0;
   // Persisted states read by the code being filled: each function body must re-bind them
-  private used: Set<ClientState>[] = [];
+  private used: Set<ClientState | ClientShared>[] = [];
+  private shareds = new Map<string, SharedInfo>();
   private refs = new Map<ClientRef, string>();
   private attached = new Map<ClientRef, { tag: string; id: string }>();
   private functions = new Set<string>();
@@ -95,12 +143,16 @@ export class ClientScope {
   }
   // Fills code that becomes a function body and returns the declarations that re-bind its persisted states
   private body(code: CompiledCode, indent = ""): { text: string; declares: string } {
-    const used = new Set<ClientState>();
+    const used = new Set<ClientState | ClientShared>();
     this.used.push(used);
     try {
       const text = this.fill(code);
       const declares = [...used]
-        .map((s) => `${indent}declare ${typeName(s.type)} ${this.states.get(s)!} for Page;\n`)
+        .map((s) =>
+          s.kind === "shared"
+            ? `${indent}declare ${typeName(s.type)} ${this.shareds.get(s.key)!.name} for This;\n`
+            : `${indent}declare ${typeName(s.type)} ${this.states.get(s)!} for Page;\n`,
+        )
         .join("");
       return { text, declares };
     } finally {
@@ -120,6 +172,9 @@ export class ClientScope {
           break;
         case "state":
           value = this.state(hole.get());
+          break;
+        case "shared":
+          value = this.read(hole.get());
           break;
         case "ref":
           value = this.ref(hole.get());
@@ -148,6 +203,85 @@ export class ClientScope {
     this.host.part("globals", `declare ${typeName(state.type)} ${name};`);
     this.host.part("stateInit", `${name} = ${this.fill(state.initial)};`, `state:${name}`);
     return name;
+  }
+  private sharedInfo(shared: ClientShared): SharedInfo {
+    checkSharedKey(shared.key, shared.site);
+    let info = this.shareds.get(shared.key);
+    if (!info) {
+      info = {
+        shared,
+        name: `Mtx_X_${shared.key}`,
+        read: false,
+        published: false,
+        watchers: [],
+      };
+      this.shareds.set(shared.key, info);
+    } else if (typeName(info.shared.type) !== typeName(shared.type))
+      throw new Error(
+        `client.shared key "${shared.key}" is declared with two types (${typeName(info.shared.type)} at ${info.shared.site}, ${typeName(shared.type)} at ${shared.site}); a key has one type`,
+      );
+    return info;
+  }
+  // Reading code (bindings, handlers, lifecycle, fns); function bodies re-declare it like persisted state
+  read(shared: ClientShared): string {
+    const info = this.sharedInfo(shared);
+    info.read = true;
+    this.used.at(-1)?.add(shared);
+    return info.name;
+  }
+  watch(shared: ClientShared, code: CompiledCode) {
+    const info = this.sharedInfo(shared);
+    info.read = true;
+    const { text, declares } = this.body(code);
+    const body = declares + text;
+    const name = this.handler(body);
+    if (!info.watchers.includes(name)) info.watchers.push(name);
+  }
+  publish(shared: ClientShared, value: unknown) {
+    const info = this.sharedInfo(shared);
+    info.published = true;
+    // Both statements run in main, where the `for This` declarations live
+    this.host.part("main", `${info.name} = ${literal(value, shared.type)};\n${info.name}_V += 1;`);
+  }
+  // Deduped function for a handler or watcher body
+  private handler(body: string): string {
+    let name = this.handlers.get(body);
+    if (!name) {
+      name = `Mtx_H${this.handlers.size + 1}`;
+      this.handlers.set(body, name);
+      this.host.part("functions", `Void ${name}() {\n${body}\n}`);
+    }
+    return name;
+  }
+  // Declarations and version tracking, emitted once the page's bindings are known
+  private finishShared() {
+    for (const info of this.shareds.values()) {
+      const type = typeName(info.shared.type);
+      const tracked = info.read && (info.watchers.length > 0 || this.dirty);
+      for (const struct of info.shared.initial.structs) this.host.part("structs", struct, struct);
+      this.host.part(
+        "stateInit",
+        info.read
+          ? `declare ${type} ${info.name} for This = ${this.fill(info.shared.initial)};`
+          : `declare ${type} ${info.name} for This;`,
+        `shared:${info.name}`,
+      );
+      if (!tracked && !info.published) continue;
+      this.host.part("stateInit", `declare Integer ${info.name}_V for This;`);
+      if (!tracked) continue;
+      // The last-seen version starts at 0, so a version published before this page loaded runs once at init
+      this.host.part("globals", `declare Integer ${info.name}_Seen;`);
+      this.host.part(
+        "sync",
+        [
+          `if (${info.name}_V != ${info.name}_Seen) {`,
+          `  ${info.name}_Seen = ${info.name}_V;`,
+          `  ${this.host.dirty()}`,
+          ...info.watchers.map((w) => `  ${w}();`),
+          "}",
+        ].join("\n"),
+      );
+    }
   }
   // `declare … for Page = init;` in main applies init once; function bodies re-bind it without a value
   private persisted(state: ClientState): string {
@@ -261,13 +395,7 @@ export class ClientScope {
       ) {
         out.scriptevents = true;
         const { text, declares } = this.body((handle as ClientHandler).body);
-        const body = declares + text;
-        let name = this.handlers.get(body);
-        if (!name) {
-          name = `Mtx_H${this.handlers.size + 1}`;
-          this.handlers.set(body, name);
-          this.host.part("functions", `Void ${name}() {\n${body}\n}`);
-        }
+        const name = this.handler(declares + text);
         this.host.part(
           "events",
           `if (Event.Type == CMlScriptEvent::Type::${events[attr]} && Event.ControlId == ${literalText(id)}) ${name}();`,
@@ -310,6 +438,7 @@ export class ClientScope {
         `${name} <=> (Page.MainFrame.GetFirstChild(${literalText(target.id)}) as ${ref.cls});`,
       );
     }
+    this.finishShared();
     this.host.dirtyWrites(this.dirty);
     if (this.dirty) {
       this.host.part("main", "Mtx_Dirty = True;");
@@ -329,7 +458,29 @@ function scope(): ClientScope {
   if (!found) throw new Error("Client handles can only be used inside <Manialink>");
   return found;
 }
+export interface PublishProps<T> {
+  to: ClientShared<T>;
+  value: T;
+}
+// Server side of client.shared: assigns the value and bumps the version in this page's script
+export function Publish<T>(props: PublishProps<T>): Node {
+  if (!isClient(props.to) || props.to.kind !== "shared")
+    throw new Error("<Publish> `to` must be a client.shared handle");
+  scope().publish(props.to, props.value);
+  return null;
+}
+
 export const __mtx: CompiledRuntime = {
+  shared: (key, type, initial, site) => ({
+    $$typeof: CLIENT,
+    kind: "shared",
+    key,
+    type,
+    initial,
+    site,
+    value: undefined as never,
+  }),
+  watch: (shared, body) => scope().watch(shared, body),
   ref: (cls, site) => ({ $$typeof: CLIENT, kind: "ref", cls, site, control: undefined as never }),
   state: (type, initial, site, options?: ClientStateOptions) => ({
     $$typeof: CLIENT,

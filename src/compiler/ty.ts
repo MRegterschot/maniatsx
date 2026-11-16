@@ -21,6 +21,7 @@ export type Ty =
   | { class: string }
   | { enum: string }
   | { state: Ty }
+  | { shared: Ty }
   | { ref: Ty }
   | { fn: FnSig };
 
@@ -42,6 +43,7 @@ export function msName(t: Ty): string {
   if ("class" in t) return t.class;
   if ("enum" in t) return t.enum;
   if ("state" in t) return `State<${msName(t.state)}>`;
+  if ("shared" in t) return `Shared<${msName(t.shared)}>`;
   if ("ref" in t) return `Ref<${msName(t.ref)}>`;
   return "fn";
 }

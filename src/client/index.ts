@@ -1,6 +1,7 @@
 export { client, action, ml } from "./authoring.ts";
 export type { Action } from "./authoring.ts";
-export { __mtx } from "./runtime.ts";
+export { __mtx, Publish } from "./runtime.ts";
+export type { PublishProps } from "./runtime.ts";
 export type {
   Integer,
   Real,
@@ -21,6 +22,7 @@ export type {
   CompiledCode,
   CompiledRuntime,
   ClientState,
+  ClientShared,
   ClientStateOptions,
   ClientHandler,
   ClientRef,

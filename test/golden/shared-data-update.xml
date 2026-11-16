@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<manialink id="shared-data-update" version="3">
+  <script><!--
+#Struct K_MapSummary {
+  Text name;
+  Text author;
+  Integer seconds;
+}
+Void Mtx_Noop() {}
+main() {
+  declare K_MapSummary Mtx_X_example_map_summary for This;
+  declare Integer Mtx_X_example_map_summary_V for This;
+  Mtx_X_example_map_summary = K_MapSummary { name = "A01 - Green Plains", author = "Nadeo", seconds = 25 };
+  Mtx_X_example_map_summary_V += 1;
+  while (True) {
+    yield;
+  }
+}
+--></script>
+</manialink>

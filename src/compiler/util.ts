@@ -12,7 +12,7 @@ export interface CompileDiagnostic {
 // A hole as the compiler knows it: `expr` is the original source text evaluated at render time.
 export type HoleSpec =
   | { kind: "value"; type: MsType; expr: string }
-  | { kind: "state" | "fn" | "action" | "ref"; expr: string }
+  | { kind: "state" | "shared" | "fn" | "action" | "ref"; expr: string }
   | { kind: "lib"; lib: string };
 
 // Lib qualifier hole; the runtime picks the alias, so compiled code works with any #Include ... as X

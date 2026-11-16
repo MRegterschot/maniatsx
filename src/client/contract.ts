@@ -9,7 +9,11 @@ export type MsType =
   | MsPrimitive
   | { readonly array: MsType }
   | { readonly record: { readonly key: "Integer" | "Text" | "Ident"; readonly value: MsType } }
-  | { readonly struct: string };
+  // `fields` is only filled for values that cross the server boundary (client.shared), so literals can be emitted
+  | {
+      readonly struct: string;
+      readonly fields?: readonly { readonly name: string; readonly type: MsType }[];
+    };
 
 // "src/widget.tsx:12:5", used in errors and pretty-mode comments
 export type SourceSite = string;
@@ -20,6 +24,8 @@ export type Hole =
   | { readonly kind: "value"; readonly type: MsType; readonly get: () => unknown }
   // Global variable name of a client.state handle
   | { readonly kind: "state"; readonly get: () => ClientState }
+  // Global variable name of a client.shared handle (a `for This` variable declared in main)
+  | { readonly kind: "shared"; readonly get: () => ClientShared }
   // Function name of a client.fn; using it registers the function
   | { readonly kind: "fn"; readonly get: () => ClientFn }
   // Global variable name of a client.ref handle; using it requires the ref to be attached to an element
@@ -50,6 +56,18 @@ export interface ClientState<T = unknown> {
   readonly persist?: { readonly key?: string };
   // Type-level only: client code reads/writes `.value`; the compiler rewrites it
   value: T;
+}
+
+// Server-written, client-read value shared between pages (`declare … for This`) with a version counter
+export interface ClientShared<T = unknown> {
+  readonly $$typeof: typeof CLIENT;
+  readonly kind: "shared";
+  readonly key: string;
+  readonly type: MsType;
+  readonly initial: CompiledCode; // value used until something is published
+  readonly site: SourceSite;
+  // Type-level only: client code reads `.value`; writing is a compile error (use <Publish>)
+  readonly value: T;
 }
 
 export interface ClientStateOptions {
@@ -111,6 +129,8 @@ export interface CompiledRuntime {
     site: SourceSite,
     options?: ClientStateOptions,
   ): ClientState<T>;
+  shared<T>(key: string, type: MsType, initial: CompiledCode, site: SourceSite): ClientShared<T>;
+  watch(shared: ClientShared, body: CompiledCode): void;
   ref<T>(cls: string, site: SourceSite): ClientRef<T>;
   handler(body: CompiledCode): ClientHandler;
   bind<T>(type: MsType, expr: CompiledCode): ClientBinding<T>;

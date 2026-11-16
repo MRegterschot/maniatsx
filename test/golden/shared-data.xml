@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<manialink id="shared-data" version="3">
+  <frame pos="-160 80">
+    <quad size="50 14" bgcolor="000000cc" />
+    <label pos="2 -2" textsize="2" id="mtx-1" />
+    <label pos="2 -6" textsize="1" id="mtx-2" />
+    <label pos="2 -10" textsize="1" id="mtx-3" />
+  </frame>
+  <script><!--
+#Struct K_MapSummary {
+  Text name;
+  Text author;
+  Integer seconds;
+}
+declare Integer Mtx_S1;
+declare Boolean Mtx_Dirty;
+declare Integer Mtx_X_example_map_summary_Seen;
+Void Mtx_H1() {
+Mtx_S1 += 1;
+Mtx_Dirty = True;
+}
+main() {
+  Mtx_S1 = 0;
+  declare K_MapSummary Mtx_X_example_map_summary for This = K_MapSummary { name = "", author = "", seconds = 0 };
+  declare Integer Mtx_X_example_map_summary_V for This;
+  declare CMlLabel Mtx_C1 <=> (Page.GetFirstChild("mtx-1") as CMlLabel);
+  Mtx_C1.Value = Mtx_X_example_map_summary.name;
+  declare CMlLabel Mtx_C2 <=> (Page.GetFirstChild("mtx-2") as CMlLabel);
+  Mtx_C2.Value = "by " ^ Mtx_X_example_map_summary.author ^ ", " ^ Mtx_X_example_map_summary.seconds ^ "s";
+  declare CMlLabel Mtx_C3 <=> (Page.GetFirstChild("mtx-3") as CMlLabel);
+  Mtx_C3.Value = "updates: " ^ Mtx_S1;
+  Mtx_Dirty = True;
+  while (True) {
+    yield;
+    if (Mtx_X_example_map_summary_V != Mtx_X_example_map_summary_Seen) {
+      Mtx_X_example_map_summary_Seen = Mtx_X_example_map_summary_V;
+      Mtx_Dirty = True;
+      Mtx_H1();
+    }
+    if (Mtx_Dirty) { Mtx_C1.Value = Mtx_X_example_map_summary.name; }
+    if (Mtx_Dirty) { Mtx_C2.Value = "by " ^ Mtx_X_example_map_summary.author ^ ", " ^ Mtx_X_example_map_summary.seconds ^ "s"; }
+    if (Mtx_Dirty) { Mtx_C3.Value = "updates: " ^ Mtx_S1; }
+    Mtx_Dirty = False;
+  }
+}
+--></script>
+</manialink>
