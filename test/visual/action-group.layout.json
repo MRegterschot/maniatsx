@@ -1,0 +1,302 @@
+[
+  {
+    "id": "widget",
+    "children": [
+      {
+        "children": [
+          {
+            "id": "mtx-1",
+            "children": [
+              {
+                "children": [
+                  {
+                    "opacity": 1,
+                    "pos": [
+                      -156,
+                      85
+                    ],
+                    "type": "quad",
+                    "z": 0,
+                    "scale": 1,
+                    "size": [
+                      5,
+                      5
+                    ],
+                    "bgColor": [
+                      0.133,
+                      0.133,
+                      0.133
+                    ],
+                    "visible": true
+                  },
+                  {
+                    "id": "mtx-2",
+                    "opacity": 1,
+                    "pos": [
+                      -153.4,
+                      82.85
+                    ],
+                    "type": "label",
+                    "z": 0,
+                    "scale": 1,
+                    "size": [
+                      0,
+                      0
+                    ],
+                    "visible": true,
+                    "textColor": [
+                      0.867,
+                      0.867,
+                      0.867
+                    ],
+                    "text": ""
+                  }
+                ],
+                "pos": [
+                  -156,
+                  85
+                ],
+                "type": "frame",
+                "z": 0,
+                "scale": 1,
+                "size": [
+                  5,
+                  5
+                ],
+                "visible": true
+              },
+              {
+                "children": [
+                  {
+                    "opacity": 1,
+                    "pos": [
+                      -171,
+                      85
+                    ],
+                    "type": "quad",
+                    "z": 0,
+                    "scale": 1,
+                    "size": [
+                      5,
+                      5
+                    ],
+                    "bgColor": [
+                      0.867,
+                      0.867,
+                      0.867
+                    ],
+                    "visible": true
+                  },
+                  {
+                    "opacity": 1,
+                    "pos": [
+                      -170.25,
+                      84.25
+                    ],
+                    "type": "quad",
+                    "z": 0,
+                    "scale": 1,
+                    "image": "https://example.com/icons/maps.png",
+                    "size": [
+                      3.5,
+                      3.5
+                    ],
+                    "bgColor": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "visible": true
+                  }
+                ],
+                "pos": [
+                  -171,
+                  85
+                ],
+                "type": "frame",
+                "z": 0,
+                "scale": 1,
+                "size": [
+                  5,
+                  5
+                ],
+                "visible": true
+              },
+              {
+                "children": [
+                  {
+                    "opacity": 1,
+                    "pos": [
+                      -166,
+                      85
+                    ],
+                    "type": "quad",
+                    "z": 0,
+                    "scale": 1,
+                    "size": [
+                      5,
+                      5
+                    ],
+                    "bgColor": [
+                      0.867,
+                      0.867,
+                      0.867
+                    ],
+                    "visible": true
+                  },
+                  {
+                    "opacity": 1,
+                    "pos": [
+                      -163.5,
+                      82.9
+                    ],
+                    "type": "label",
+                    "z": 0,
+                    "scale": 1,
+                    "size": [
+                      0,
+                      0
+                    ],
+                    "visible": true,
+                    "textColor": [
+                      0.133,
+                      0.133,
+                      0.133
+                    ],
+                    "text": ""
+                  }
+                ],
+                "pos": [
+                  -166,
+                  85
+                ],
+                "type": "frame",
+                "z": 0,
+                "scale": 1,
+                "size": [
+                  5,
+                  5
+                ],
+                "visible": true
+              },
+              {
+                "children": [
+                  {
+                    "opacity": 1,
+                    "pos": [
+                      -161,
+                      85
+                    ],
+                    "type": "quad",
+                    "z": 0,
+                    "scale": 1,
+                    "size": [
+                      5,
+                      5
+                    ],
+                    "bgColor": [
+                      0.867,
+                      0.867,
+                      0.867
+                    ],
+                    "visible": true
+                  },
+                  {
+                    "opacity": 1,
+                    "pos": [
+                      -158.5,
+                      82.9
+                    ],
+                    "type": "label",
+                    "z": 0,
+                    "scale": 1,
+                    "size": [
+                      0,
+                      0
+                    ],
+                    "visible": true,
+                    "textColor": [
+                      0.133,
+                      0.133,
+                      0.133
+                    ],
+                    "text": ""
+                  }
+                ],
+                "pos": [
+                  -161,
+                  85
+                ],
+                "type": "frame",
+                "z": 0,
+                "scale": 1,
+                "size": [
+                  5,
+                  5
+                ],
+                "visible": true
+              },
+              {
+                "id": "mtx-3",
+                "opacity": 0,
+                "pos": [
+                  -156,
+                  85
+                ],
+                "type": "quad",
+                "z": 2,
+                "scale": 1,
+                "size": [
+                  5,
+                  5
+                ],
+                "bgColor": [
+                  0.133,
+                  0.133,
+                  0.133
+                ],
+                "visible": true
+              }
+            ],
+            "pos": [
+              -171,
+              85
+            ],
+            "type": "frame",
+            "z": 0,
+            "scale": 1,
+            "size": [
+              20,
+              5
+            ],
+            "visible": true
+          }
+        ],
+        "pos": [
+          -156,
+          85
+        ],
+        "type": "frame",
+        "z": 10,
+        "scale": 1,
+        "size": [
+          20,
+          5
+        ],
+        "visible": true
+      }
+    ],
+    "pos": [
+      -156,
+      85
+    ],
+    "type": "frame",
+    "z": 10,
+    "scale": 1,
+    "size": [
+      100,
+      100
+    ],
+    "visible": true
+  }
+]

@@ -1,0 +1,119 @@
+[
+  {
+    "children": [
+      {
+        "children": [
+          {
+            "opacity": 0.72,
+            "pos": [
+              -158,
+              88
+            ],
+            "type": "quad",
+            "z": 0,
+            "scale": 0.8,
+            "size": [
+              55,
+              10
+            ],
+            "bgColor": [
+              0.2,
+              0.2,
+              0.2
+            ],
+            "visible": true
+          },
+          {
+            "opacity": 1,
+            "pos": [
+              -156.4,
+              84.8
+            ],
+            "type": "label",
+            "z": 0,
+            "scale": 0.8,
+            "size": [
+              5,
+              5
+            ],
+            "visible": true,
+            "textColor": [
+              1,
+              1,
+              1
+            ],
+            "text": ""
+          },
+          {
+            "id": "mtx-1",
+            "opacity": 1,
+            "pos": [
+              -151.6,
+              84.8
+            ],
+            "type": "label",
+            "z": 0,
+            "scale": 0.8,
+            "size": [
+              25,
+              5
+            ],
+            "visible": true,
+            "textColor": [
+              1,
+              1,
+              1
+            ],
+            "text": "A01 - Green Plains"
+          },
+          {
+            "id": "mtx-2",
+            "opacity": 1,
+            "pos": [
+              -130,
+              84.8
+            ],
+            "type": "label",
+            "z": 0,
+            "scale": 0.8,
+            "size": [
+              18,
+              4
+            ],
+            "visible": true,
+            "textColor": [
+              0.667,
+              0.667,
+              0.667
+            ],
+            "text": "Nadeo"
+          }
+        ],
+        "pos": [
+          -158,
+          88
+        ],
+        "type": "frame",
+        "z": 0,
+        "scale": 0.8,
+        "size": [
+          55,
+          10
+        ],
+        "visible": true
+      }
+    ],
+    "pos": [
+      -158,
+      88
+    ],
+    "type": "frame",
+    "z": 0,
+    "scale": 0.8,
+    "size": [
+      100,
+      100
+    ],
+    "visible": true
+  }
+]

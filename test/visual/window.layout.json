@@ -1,0 +1,138 @@
+[
+  {
+    "id": "window",
+    "children": [
+      {
+        "opacity": 1,
+        "pos": [
+          -50,
+          30
+        ],
+        "type": "quad",
+        "z": 0,
+        "scale": 1,
+        "size": [
+          100,
+          5
+        ],
+        "bgColor": [
+          0.133,
+          0.133,
+          0.133
+        ],
+        "visible": true
+      },
+      {
+        "opacity": 1,
+        "pos": [
+          -48.5,
+          27.75
+        ],
+        "type": "label",
+        "z": 0,
+        "scale": 1,
+        "size": [
+          90.5,
+          5
+        ],
+        "visible": true,
+        "textColor": [
+          0.867,
+          0.867,
+          0.867
+        ],
+        "text": "Example window"
+      },
+      {
+        "opacity": 1,
+        "pos": [
+          48.5,
+          27.75
+        ],
+        "type": "label",
+        "z": 0,
+        "scale": 1,
+        "size": [
+          5,
+          5
+        ],
+        "visible": true,
+        "textColor": [
+          0.133,
+          0.133,
+          0.133
+        ],
+        "text": ""
+      },
+      {
+        "opacity": 1,
+        "pos": [
+          -50,
+          25
+        ],
+        "type": "quad",
+        "z": 0,
+        "scale": 1,
+        "size": [
+          100,
+          60
+        ],
+        "bgColor": [
+          0.867,
+          0.867,
+          0.867
+        ],
+        "visible": true
+      },
+      {
+        "children": [
+          {
+            "opacity": 1,
+            "pos": [
+              -48,
+              22
+            ],
+            "type": "label",
+            "z": 0,
+            "scale": 1,
+            "size": [
+              0,
+              0
+            ],
+            "visible": true,
+            "textColor": [
+              0.133,
+              0.133,
+              0.133
+            ],
+            "text": "Hello, Trackmania!"
+          }
+        ],
+        "pos": [
+          -50,
+          25
+        ],
+        "type": "frame",
+        "z": 0,
+        "scale": 1,
+        "size": [
+          100,
+          60
+        ],
+        "visible": true
+      }
+    ],
+    "pos": [
+      -50,
+      30
+    ],
+    "type": "frame",
+    "z": 20,
+    "scale": 1,
+    "size": [
+      100,
+      65
+    ],
+    "visible": true
+  }
+]

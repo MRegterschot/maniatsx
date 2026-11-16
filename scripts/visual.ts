@@ -97,6 +97,9 @@ try {
     } catch (error) {
       ok = false;
       details.push(error instanceof Error ? error.message : String(error));
+    } finally {
+      // Each case gets its own layer; drop it so it can't show up in the next screenshot
+      await bridge.clear(name).catch(() => {});
     }
     reports.push({ name, ok, details });
     console.log(
