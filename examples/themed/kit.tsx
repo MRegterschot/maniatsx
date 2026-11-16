@@ -18,7 +18,7 @@ export const kit = createThemeKit<Tokens>({
     size: { sm: 1, md: 2, lg: 3 },
     opacity: { panel: 0.9 },
   },
-  text: { "map-info.icon": "▣" },
+  text: { "map-info.icon": "\uF279" },
 });
 
 export interface PanelProps {
@@ -45,6 +45,7 @@ export const Panel = slot<PanelProps>(
 
 export interface LabelProps {
   pos: Vec2;
+  size?: Vec2;
   textsize: number;
   text?: string;
   style: "title" | "caption";
@@ -57,6 +58,7 @@ export const Label = slot<LabelProps>("ui/label", function DefaultLabel(props) {
   return (
     <label
       pos={props.pos}
+      size={props.size}
       text={props.text}
       textsize={props.textsize}
       textfont={props.style === "title" ? t.font.title : t.font.body}

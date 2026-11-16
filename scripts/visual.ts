@@ -7,7 +7,7 @@ import { examples } from "../examples/index.ts";
 import { bridgeRoot } from "./bridge-paths.ts";
 import { Bridge } from "./bridge-client.ts";
 import { decodeTga } from "./tga.ts";
-import { addBackdrop, treeDiff } from "./visual-utils.ts";
+import { addBackdrop, layoutSnapshot, treeDiff } from "./visual-utils.ts";
 
 const update = Bun.argv.includes("--update");
 const filterIndex = Bun.argv.indexOf("--filter");
@@ -39,12 +39,12 @@ try {
       const shown = await bridge.show(name, xml, { hideOthers: true, waitFrames: 30 });
       if (/<script\b/i.test(xml) && !shown.scriptRunning)
         throw new Error("page has a script but scriptRunning is false");
-      const layout = JSON.stringify(shown.tree, null, 2) + "\n";
+      const layout = JSON.stringify(layoutSnapshot(shown.tree), null, 2) + "\n";
       if (update) await writeFile(layoutFile, layout);
       else {
         try {
           const baseline = JSON.parse(await readFile(layoutFile, "utf8"));
-          const changes = treeDiff(baseline, shown.tree);
+          const changes = treeDiff(baseline, layoutSnapshot(shown.tree));
           if (changes.length) {
             ok = false;
             details.push(...changes.slice(0, 30));

@@ -3,9 +3,9 @@
   <frame pos="103 88">
     <frame size="55 10">
       <quad size="55 10" bgcolor="222" opacity="0.9" />
-      <label pos="2 -2" text="▣" textsize="3" textfont="GameFontBold" textcolor="FFF" />
-      <label pos="10 -2" text="A01 - Green Plains" textsize="3" textfont="GameFontBold" textcolor="FFF" id="mtx-1" />
-      <label pos="10 -6" text="Nadeo" textsize="1" textfont="GameFont" textcolor="AAA" id="mtx-2" />
+      <label pos="2 -2" size="6 6" text="" textsize="3" textfont="GameFontBold" textcolor="FFF" />
+      <label pos="10 -2" size="43 5" text="A01 - Green Plains" textsize="3" textfont="GameFontBold" textcolor="FFF" id="mtx-1" />
+      <label pos="10 -6" size="43 4" text="Nadeo" textsize="1" textfont="GameFont" textcolor="AAA" id="mtx-2" />
     </frame>
   </frame>
   <script><!--

@@ -29,3 +29,9 @@ export function treeDiff(before: unknown, after: unknown): string[] {
   walk(before, after, "");
   return lines;
 }
+
+// The game reports junk for the root frame and the backdrop is ours; snapshot only the page content
+export function layoutSnapshot(tree: unknown): unknown {
+  const children = (tree as { children?: unknown[] } | null)?.children;
+  return Array.isArray(children) ? children.slice(1) : tree;
+}

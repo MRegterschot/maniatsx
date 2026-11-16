@@ -15,18 +15,32 @@ interface ViewProps {
 function DefaultView({ name, author, nameRef, authorRef, icon }: ViewProps) {
   return (
     <Panel size={[55, 10]}>
-      <Label pos={[2, -2]} textsize={3} text={icon} style="title" />
-      <Label pos={[10, -2]} textsize={3} text={name} style="title" ref={nameRef} />
-      <Label pos={[10, -6]} textsize={1} text={author} style="caption" ref={authorRef} />
+      <Label pos={[2, -2]} size={[6, 6]} textsize={3} text={icon} style="title" />
+      <Label pos={[10, -2]} size={[43, 5]} textsize={3} text={name} style="title" ref={nameRef} />
+      <Label
+        pos={[10, -6]}
+        size={[43, 4]}
+        textsize={1}
+        text={author}
+        style="caption"
+        ref={authorRef}
+      />
     </Panel>
   );
 }
 function CompactView({ name, author, nameRef, authorRef, icon }: ViewProps) {
   return (
     <Panel size={[55, 10]}>
-      <Label pos={[2, -4]} textsize={2} text={icon} style="title" />
-      <Label pos={[8, -4]} textsize={2} text={name} style="title" ref={nameRef} />
-      <Label pos={[35, -4]} textsize={1} text={author} style="caption" ref={authorRef} />
+      <Label pos={[2, -4]} size={[5, 5]} textsize={2} text={icon} style="title" />
+      <Label pos={[8, -4]} size={[25, 5]} textsize={2} text={name} style="title" ref={nameRef} />
+      <Label
+        pos={[35, -4]}
+        size={[18, 4]}
+        textsize={1}
+        text={author}
+        style="caption"
+        ref={authorRef}
+      />
     </Panel>
   );
 }

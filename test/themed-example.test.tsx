@@ -18,8 +18,8 @@ describe("themed map info example", () => {
       colors
         .reduce((out, color) => out.replaceAll(`"${color}"`, '"C"'), markup(xml))
         .replace(icon, "I");
-    expect(neutral(renderMapInfo(midnight), ["112", "223", "DDF", "89A"], "◆")).toBe(
-      neutral(renderMapInfo(defaultTheme), ["222", "333", "FFF", "AAA"], "▣"),
+    expect(neutral(renderMapInfo(midnight), ["112", "223", "DDF", "89A"], "\uF041")).toBe(
+      neutral(renderMapInfo(defaultTheme), ["222", "333", "FFF", "AAA"], "\uF279"),
     );
   });
 
@@ -28,7 +28,7 @@ describe("themed map info example", () => {
     expect(xml).toContain('<frame pos="-158 88" scale="0.8">');
     expect(renderMapInfo(defaultTheme)).toContain('<frame pos="103 88">');
     // CompactView puts the author on the name's line; the panel override uses the thin variant
-    expect(xml).toContain('<label pos="35 -4" text="Nadeo"');
+    expect(xml).toContain('<label pos="35 -4" size="18 4" text="Nadeo"');
     expect(xml).toContain('bgcolor="333" opacity="0.72"');
   });
 

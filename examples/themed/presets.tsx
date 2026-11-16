@@ -9,7 +9,7 @@ export const midnight = kit.defineTheme({
   tokens: {
     color: { surface: "112", surfaceAlt: "223", accent: "8AF", text: "DDF", textMuted: "89A" },
   },
-  text: { "map-info.icon": "◆" },
+  text: { "map-info.icon": "\uF041" },
 });
 export const compact = kit.defineTheme({
   id: "compact",
