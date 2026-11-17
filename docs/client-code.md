@@ -44,7 +44,7 @@ const count = client.state<Integer>(0);
 <quad onClick={client.handler(() => { count.value += 1; })} />
 ```
 
-`action(name).trigger(...args)` sends a page action; arguments are joined with `|`, which is escaped in the payload. Supported bindings and event props are documented in D5 of `PLAN-phase2.md`.
+`action(name).trigger(...args)` sends a page action; arguments are joined with `|` and not escaped, so an argument must not contain `|`. Supported bindings and event props are documented in D5 of `PLAN-phase2.md`.
 
 ## Persisted state
 
