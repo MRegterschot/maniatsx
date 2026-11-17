@@ -292,8 +292,11 @@ export function compileSource(
   try {
     const options: ts.CompilerOptions = {
       target: ts.ScriptTarget.ES2022,
-      module: ts.ModuleKind.NodeNext,
-      moduleResolution: ts.ModuleResolutionKind.NodeNext,
+      // Analysis only: bundler resolution accepts extensionless, .ts and package-exports imports alike
+      module: ts.ModuleKind.ESNext,
+      moduleResolution: ts.ModuleResolutionKind.Bundler,
+      allowImportingTsExtensions: true,
+      noEmit: true,
       jsx: ts.JsxEmit.ReactJSX,
       jsxImportSource: "maniatsx",
       baseUrl: root,

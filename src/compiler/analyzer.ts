@@ -280,6 +280,12 @@ export class Analyzer {
     const alias = type.aliasSymbol;
     const aliasDecl = alias?.declarations?.[0];
     if (alias && aliasDecl && inTypes(aliasDecl) && alias.name === "Ident") return "Ident";
+    // An action handle, however it was obtained (action() or a host helper returning Action)
+    const own = type.getSymbol();
+    const ownDecl = own?.declarations?.[0];
+    if (own && ownDecl && (inAuthoring(ownDecl) || inContract(ownDecl))) {
+      if (own.name === "Action" || own.name === "ClientAction") return "Action";
+    }
     const f = type.flags;
     if (f & ts.TypeFlags.BooleanLike) return "Boolean";
     if (f & ts.TypeFlags.StringLike) {

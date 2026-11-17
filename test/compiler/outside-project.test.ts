@@ -37,3 +37,19 @@ export const count = client.state<Integer>(0);`;
     rmSync(pkg, { recursive: true, force: true });
   }
 });
+
+// Hosts hand out actions through helpers (gocontrolpanel's ctx.ui.action), not only action()
+test("treats any value typed Action as an action handle", () => {
+  const dir = mkdtempSync(join(tmpdir(), "mtx-action-"));
+  try {
+    const source = `import { client, type Action } from "maniatsx/client";
+declare const host: { action(name: string): Action };
+const pick = host.action("demo:pick");
+export const onPick = client.handler(() => { pick.trigger("42"); });`;
+    const result = compileSource(join(dir, "widget.tsx"), source, { rootDir: dir });
+    expect(result.diagnostics).toEqual([]);
+    expect(result.code).toContain("__mtx.handler");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
