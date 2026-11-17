@@ -25,9 +25,13 @@ The package has no runtime dependencies. TypeScript compiler dependencies are us
 
 For direct Bun execution, register `maniatsxPlugin()` through a preload file. For a bundle, pass it in `Bun.build({ plugins: [...] })`. The plugin uses the working directory as its compiler root; configure `rootDir` or `tsconfigPath` when the project root differs.
 
+Pass `keyPrefix` to `maniatsxPlugin({ keyPrefix: "plugin_name" })` to namespace shared and persisted client storage keys.
+
 ## esbuild plugin
 
 Use `maniatsxEsbuildPlugin()` when compiling a bundle with esbuild, including plugin bundles built outside Bun. It applies the client transform to project TypeScript before the bundle is evaluated.
+
+Pass `keyPrefix` to `maniatsxEsbuildPlugin({ keyPrefix: "plugin_name" })` for the same storage namespace.
 
 ## `maniatsx compile`
 
@@ -36,6 +40,7 @@ The `maniatsx compile` CLI compiles a project using its tsconfig. The installed 
 ```sh
 maniatsx-compile --project tsconfig.json --out compiled
 maniatsx-compile --project tsconfig.json --out compiled --check
+maniatsx-compile --project tsconfig.json --out compiled --key-prefix plugin_name
 ```
 
 `--check` reports diagnostics without writing; `--all` also copies untouched project files. See `maniatsx-compile --help` for CLI options.

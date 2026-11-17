@@ -44,6 +44,28 @@ test("sites are relative to the root, so output doesn't depend on the machine", 
   expect(code).not.toContain(process.cwd());
 });
 
+test("keyPrefix namespaces shared and explicit and default persisted keys", () => {
+  const source = `import { client, type Integer } from "maniatsx/client";
+const shared = client.shared<Integer>("data", 0);
+const stable = client.state<Integer>(0, { persist: true, key: "data" });
+const automatic = client.state<Integer>(0, { persist: true });`;
+  const plain = compileSource("test/compiler/keys.tsx", source);
+  const prefixed = compileSource("test/compiler/keys.tsx", source, { keyPrefix: "plugin-a" });
+  const other = compileSource("test/compiler/keys.tsx", source, { keyPrefix: "plugin-b" });
+  expect(plain.diagnostics).toEqual([]);
+  expect(prefixed.diagnostics).toEqual([]);
+  expect(plain.code).toContain('__mtx.shared("data"');
+  expect(plain.code).toContain('"key":"data"');
+  expect(prefixed.code).toContain('__mtx.shared("plugina_data"');
+  expect(prefixed.code).toContain('"key":"data","keyPrefix":"plugin-a"');
+  expect(prefixed.code).toContain('"keyPrefix":"plugin-a"');
+  expect(other.code).toContain('__mtx.shared("pluginb_data"');
+  expect(other.code).toContain('"key":"data","keyPrefix":"plugin-b"');
+  expect(
+    compileSource("x.tsx", source, { keyPrefix: "bad prefix" }).diagnostics[0]?.message,
+  ).toContain("keyPrefix must be non-empty");
+});
+
 test("numeric contexts, diagnostics, and division warning", () => {
   const compile = (body: string) =>
     compileSource(

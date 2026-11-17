@@ -50,6 +50,8 @@ const count = client.state<Integer>(0);
 
 `client.state<boolean>(false, { persist: true })` survives re-sends with the same Manialink ID and layer. Initial values apply only the first time. A source-position-derived key changes when the call moves; provide a literal `key`, such as `{ persist: true, key: "open" }`, to keep a stable name.
 
+Builds can set `keyPrefix` (or CLI `--key-prefix`) to namespace shared and persisted storage names, including source-derived persisted names. Use a distinct prefix per plugin because `for This` shared values outlive layers and are visible across them.
+
 ## Shared values and Publish
 
 `client.shared<T>(key, initial)` defines a server-written value shared by an update page and a reader page. Both import the same handle. Client code reads its read-only `.value`; `client.watch(shared, () => ...)` runs when a new version arrives. The update page writes with `<Publish to={shared} value={data} />` inside its Manialink. Keys must be string literals and cannot end in `_V` or `_Seen`. Shared values use ManiaScript `for This` storage; namespace keys because that storage outlives page layers.

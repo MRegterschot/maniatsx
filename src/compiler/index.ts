@@ -9,7 +9,16 @@ import { joinItems, type CompileDiagnostic, type HoleSpec, type Item } from "./u
 export type { CompileDiagnostic } from "./util.ts";
 
 // Sites are relative to root so builds are reproducible across machines
-function transform(program: ts.Program, files: readonly ts.SourceFile[], root: string) {
+function prefixedKey(key: string, prefix?: string) {
+  return prefix ? `${prefix}_${key}`.replace(/\W/g, "") : key;
+}
+
+function transform(
+  program: ts.Program,
+  files: readonly ts.SourceFile[],
+  root: string,
+  keyPrefix?: string,
+) {
   const diagnostics: CompileDiagnostic[] = [];
   const analyzer = new Analyzer(program, program.getTypeChecker(), {
     report(node, code, message, severity = "error") {
@@ -65,7 +74,7 @@ function transform(program: ts.Program, files: readonly ts.SourceFile[], root: s
             const type = toMs(analyzer.stateArgTy(node, node));
             const options = stateOptions(analyzer, node.arguments[1]);
             if (type && options !== null)
-              replacement = `__mtx.state(${JSON.stringify(type)}, ${descriptor([{ kind: "value", type, expr: arg.getText(file) }])}, ${JSON.stringify(site)}${options ? `, ${JSON.stringify(options)}` : ""})`;
+              replacement = `__mtx.state(${JSON.stringify(type)}, ${descriptor([{ kind: "value", type, expr: arg.getText(file) }])}, ${JSON.stringify(site)}${options || keyPrefix ? `, ${JSON.stringify({ ...options, ...(keyPrefix && options?.persist && { keyPrefix }) })}` : ""})`;
           } else if (kind === "shared") {
             const key = arg && unparen(arg);
             if (!key || !ts.isStringLiteralLike(key))
@@ -90,7 +99,7 @@ function transform(program: ts.Program, files: readonly ts.SourceFile[], root: s
               });
               const type = msWithFields(analyzer, tracked.result);
               if (type)
-                replacement = `__mtx.shared(${JSON.stringify(key.text)}, ${JSON.stringify(type)}, ${descriptor([{ kind: "value", type, expr: node.arguments[1].getText(file) }], tracked.structs)}, ${JSON.stringify(site)})`;
+                replacement = `__mtx.shared(${JSON.stringify(prefixedKey(key.text, keyPrefix))}, ${JSON.stringify(type)}, ${descriptor([{ kind: "value", type, expr: node.arguments[1].getText(file) }], tracked.structs)}, ${JSON.stringify(site)})`;
               else
                 analyzer.report(
                   node,
@@ -260,8 +269,9 @@ function stateOptions(
 export function compileSource(
   fileName: string,
   sourceText: string,
-  opts: { rootDir?: string } = {},
+  opts: { rootDir?: string; keyPrefix?: string } = {},
 ) {
+  const keyPrefix = opts.keyPrefix;
   const root = path.resolve(opts.rootDir ?? process.cwd());
   const name = path.resolve(root, fileName);
   try {
@@ -285,7 +295,11 @@ export function compileSource(
     host.readFile = (f) => (path.resolve(f) === name ? sourceText : read(f));
     host.fileExists = (f) => path.resolve(f) === name || exists(f);
     const program = ts.createProgram([name], options, host);
-    const result = transform(program, [program.getSourceFile(name)!], root);
+    if (keyPrefix !== undefined && !/^[A-Za-z0-9._-]+$/.test(keyPrefix))
+      throw new Error(
+        "keyPrefix must be non-empty and contain only letters, digits, '.', '-' or '_'.",
+      );
+    const result = transform(program, [program.getSourceFile(name)!], root, keyPrefix);
     return { code: result.output.get(name)!, diagnostics: result.diagnostics };
   } catch (error) {
     return {
@@ -304,7 +318,13 @@ export function compileSource(
   }
 }
 
-export function compileProject({ tsconfigPath }: { tsconfigPath: string }) {
+export function compileProject({
+  tsconfigPath,
+  keyPrefix,
+}: {
+  tsconfigPath: string;
+  keyPrefix?: string;
+}) {
   const config = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
   if (config.error)
     throw new Error(ts.flattenDiagnosticMessageText(config.error.messageText, "\n"));
@@ -314,10 +334,15 @@ export function compileProject({ tsconfigPath }: { tsconfigPath: string }) {
     path.dirname(path.resolve(tsconfigPath)),
   );
   const program = ts.createProgram(parsed.fileNames, parsed.options);
+  if (keyPrefix !== undefined && !/^[A-Za-z0-9._-]+$/.test(keyPrefix))
+    throw new Error(
+      "keyPrefix must be non-empty and contain only letters, digits, '.', '-' or '_'.",
+    );
   const result = transform(
     program,
     parsed.fileNames.map((f) => program.getSourceFile(f)).filter((f): f is ts.SourceFile => !!f),
     path.dirname(path.resolve(tsconfigPath)),
+    keyPrefix,
   );
   return { files: result.output, diagnostics: result.diagnostics };
 }

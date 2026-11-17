@@ -2,7 +2,9 @@ import path from "node:path";
 import type { BunPlugin } from "bun";
 import { compilePluginLoad, formatDiagnostic } from "./plugin-shared.ts";
 
-export function maniatsxPlugin(opts: { rootDir?: string; tsconfigPath?: string } = {}): BunPlugin {
+export function maniatsxPlugin(
+  opts: { rootDir?: string; tsconfigPath?: string; keyPrefix?: string } = {},
+): BunPlugin {
   const rootDir = path.resolve(
     opts.rootDir ?? (opts.tsconfigPath ? path.dirname(opts.tsconfigPath) : "."),
   );
@@ -14,7 +16,7 @@ export function maniatsxPlugin(opts: { rootDir?: string; tsconfigPath?: string }
         const loader = file.endsWith("x") ? ("tsx" as const) : ("ts" as const);
         // Runtime plugins (Bun.plugin) must always return contents, so untouched files pass through as-is
         const untouched = { contents: source, loader };
-        const result = compilePluginLoad(file, source, rootDir);
+        const result = compilePluginLoad(file, source, rootDir, opts.keyPrefix);
         if (!result) return untouched;
         for (const warning of result.diagnostics.filter((d) => d.severity === "warning"))
           console.warn(formatDiagnostic(warning));

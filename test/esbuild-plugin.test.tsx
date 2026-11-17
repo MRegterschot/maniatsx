@@ -4,7 +4,7 @@ import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { maniatsxEsbuildPlugin } from "../src/compiler/esbuild-plugin.ts";
-import { extractScripts } from "./support/maniascript.ts";
+import { extractScripts, parseManiaScript } from "./support/maniascript.ts";
 
 const root = process.cwd();
 const dir = path.join(root, "test/compiler/.esbuild-tmp");
@@ -19,7 +19,7 @@ test("esbuild compiles client handlers and reports located errors", async () => 
     `import { client, type Integer } from "maniatsx/client";
 import { Manialink, render } from "maniatsx";
 export function Widget() {
- const count = client.state<Integer>(1);
+ const count = client.state<Integer>(1, { persist: true, key: "count" });
  return <label text="click" onClick={client.handler(() => { count.value += 1; })} />;
 }
 export { Manialink, render };`,
@@ -30,7 +30,7 @@ export { Manialink, render };`,
     bundle: true,
     format: "esm",
     platform: "neutral",
-    plugins: [maniatsxEsbuildPlugin({ rootDir: root })],
+    plugins: [maniatsxEsbuildPlugin({ rootDir: root, keyPrefix: "fixture" })],
     alias: {
       "maniatsx/client": path.join(root, "src/client/index.ts"),
       "maniatsx/jsx-runtime": path.join(root, "src/jsx-runtime.ts"),
@@ -43,8 +43,11 @@ export { Manialink, render };`,
       <bundle.Widget />
     </bundle.Manialink>,
   );
-  expect(extractScripts(xml).join("\n")).toContain("Mtx_S1 = 1;");
-  expect(extractScripts(xml).join("\n")).toContain("Mtx_S1 += 1;");
+  const script = extractScripts(xml).join("\n");
+  expect(script).toContain("Mtx_P_fixture_count for Page = 1;");
+  expect(script).toContain("Mtx_P_fixture_count += 1;");
+  expect(script).toContain("Mtx_P_fixture_count");
+  expect(parseManiaScript(script).errors).toEqual([]);
 
   await Bun.write(
     entry,

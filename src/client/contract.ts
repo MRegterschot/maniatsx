@@ -53,7 +53,7 @@ export interface ClientState<T = unknown> {
   readonly initial: CompiledCode; // usually a single value hole
   readonly site: SourceSite;
   // Kept across page re-sends (`declare … for Page`); the key defaults to a hash of `site`
-  readonly persist?: { readonly key?: string };
+  readonly persist?: { readonly key?: string; readonly keyPrefix?: string };
   // Type-level only: client code reads/writes `.value`; the compiler rewrites it
   value: T;
 }
@@ -75,6 +75,8 @@ export interface ClientStateOptions {
   persist?: boolean;
   // Stable name part for persisted state (letters, digits, `_`); defaults to a hash of the source site
   key?: string;
+  /** @internal compiler-only namespace for persisted storage names */
+  keyPrefix?: string;
 }
 
 export interface ClientRef<T = unknown> {

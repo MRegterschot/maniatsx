@@ -285,14 +285,14 @@ export class ClientScope {
   }
   // `declare … for Page = init;` in main applies init once; function bodies re-bind it without a value
   private persisted(state: ClientState): string {
-    const { key } = state.persist!;
+    const { key, keyPrefix } = state.persist!;
     let name: string;
     if (key !== undefined) {
       if (!/^[A-Za-z]\w*$/.test(key))
         throw new Error(
           `client.state at ${state.site}: invalid persist key ${JSON.stringify(key)}`,
         );
-      name = `Mtx_P_${key}`;
+      name = `Mtx_P_${keyPrefix ? `${keyPrefix}_${key}`.replace(/\W/g, "") : key}`;
       if (this.persistedNames.has(name))
         throw new Error(
           `client.state at ${state.site}: persist key "${key}" is used twice on this page; keys must be unique`,
@@ -304,7 +304,7 @@ export class ClientScope {
         .split("/")
         .pop()!
         .replace(/\.\w+$/, "");
-      const base = `Mtx_P_${stem.replace(/\W/g, "") || "state"}_${hash(state.site)}`;
+      const base = `Mtx_P_${keyPrefix ? `${keyPrefix}_`.replace(/\W/g, "") : ""}${stem.replace(/\W/g, "") || "state"}_${hash(state.site)}`;
       name = base;
       for (let n = 2; this.persistedNames.has(name); n++) name = `${base}_${n}`;
     }
@@ -488,7 +488,12 @@ export const __mtx: CompiledRuntime = {
     type,
     initial,
     site,
-    ...(options?.persist && { persist: options.key === undefined ? {} : { key: options.key } }),
+    ...(options?.persist && {
+      persist: {
+        ...(options.key === undefined ? {} : { key: options.key }),
+        ...(options.keyPrefix && { keyPrefix: options.keyPrefix }),
+      },
+    }),
     value: undefined as never,
   }),
   handler: (body) => ({ $$typeof: CLIENT, kind: "handler", body }),

@@ -19,6 +19,7 @@ interface EsbuildBuild {
 }
 export interface EsbuildPluginOptions {
   rootDir?: string;
+  keyPrefix?: string;
   tsconfigPath?: string;
 }
 export interface EsbuildPlugin {
@@ -36,7 +37,7 @@ export function maniatsxEsbuildPlugin(options: EsbuildPluginOptions = {}): Esbui
       build.onLoad({ filter: /\.[cm]?tsx?$/ }, async ({ path: file }) => {
         const source = await readFile(file, "utf8");
         const loader = file.endsWith("x") ? "tsx" : "ts";
-        const result = compilePluginLoad(file, source, rootDir);
+        const result = compilePluginLoad(file, source, rootDir, options.keyPrefix);
         if (!result) return { contents: source, loader };
         const messages = (severity: "error" | "warning") =>
           result.diagnostics
