@@ -1,5 +1,7 @@
 import ts from "typescript6";
+import { existsSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { CompiledCode, MsType } from "../client/contract.ts";
 import { Analyzer, authoringCallKind, unparen } from "./analyzer.ts";
 import { Lowerer } from "./lower.ts";
@@ -266,6 +268,19 @@ function stateOptions(
   return persist ? { persist: true, ...(key !== undefined && { key }) } : undefined;
 }
 
+// maniatsx's own entry points, from this compiler's install (source in the repo, .d.ts when built),
+// so projects that don't install maniatsx themselves still resolve its client API
+const PKG = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const FROM_SOURCE = existsSync(path.join(PKG, "src/client/index.ts"));
+const entry = (src: string, dts: string) => path.join(PKG, FROM_SOURCE ? src : dts);
+const OWN_PATHS: Record<string, string[]> = {
+  maniatsx: [entry("src/index.ts", "dist/index.d.ts")],
+  "maniatsx/client": [entry("src/client/index.ts", "dist/client/index.d.ts")],
+  "maniatsx/maniascript": [entry("src/maniascript/index.ts", "dist/maniascript/index.d.ts")],
+  "maniatsx/jsx-runtime": [entry("src/jsx-runtime.ts", "dist/jsx-runtime.d.ts")],
+  "maniatsx/theme": [entry("src/theme.ts", "dist/theme.d.ts")],
+};
+
 export function compileSource(
   fileName: string,
   sourceText: string,
@@ -282,11 +297,7 @@ export function compileSource(
       jsx: ts.JsxEmit.ReactJSX,
       jsxImportSource: "maniatsx",
       baseUrl: root,
-      paths: {
-        "maniatsx/client": ["src/client/index.ts"],
-        "maniatsx/maniascript": ["src/maniascript/index.ts"],
-        "maniatsx/jsx-runtime": ["src/jsx-runtime.ts"],
-      },
+      paths: OWN_PATHS,
       skipLibCheck: true,
     };
     const host = ts.createCompilerHost(options);
