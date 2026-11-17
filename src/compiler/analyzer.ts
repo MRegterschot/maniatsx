@@ -23,19 +23,19 @@ const AUTHORING_KINDS = new Set<string>([
 export const LIBS = new Set(["MathLib", "TextLib", "TimeLib", "ColorLib", "AnimLib", "MapUnits"]);
 export const VEC_CTORS = new Set(["vec2", "vec3", "int2", "int3"]);
 
-const fileEndsWith = (node: ts.Node, suffix: string) =>
-  norm(node.getSourceFile().fileName).endsWith(suffix);
-export const inAuthoring = (n: ts.Node) => fileEndsWith(n, "/src/client/authoring.ts");
-export const inApi = (n: ts.Node) => fileEndsWith(n, "/src/maniascript/api.generated.ts");
-export const inTypes = (n: ts.Node) => fileEndsWith(n, "/src/maniascript/types.ts");
-export const inContract = (n: ts.Node) => fileEndsWith(n, "/src/client/contract.ts");
+// A maniatsx library file, from source (`src/<rel>.ts`) or the built typings (`dist/<rel>.d.ts`)
+export const isLibraryFile = (fileName: string, rel: string) => {
+  const f = norm(fileName);
+  return f.endsWith(`/src/${rel}.ts`) || f.endsWith(`/dist/${rel}.d.ts`);
+};
+const fileIs = (node: ts.Node, rel: string) => isLibraryFile(node.getSourceFile().fileName, rel);
+export const inAuthoring = (n: ts.Node) => fileIs(n, "client/authoring");
+export const inApi = (n: ts.Node) => fileIs(n, "maniascript/api.generated");
+export const inTypes = (n: ts.Node) => fileIs(n, "maniascript/types");
+export const inContract = (n: ts.Node) => fileIs(n, "client/contract");
 // Files that make up the maniatsx library itself; diagnostics inside them are never ours to report
 export const inLibrary = (n: ts.Node) =>
-  inAuthoring(n) ||
-  inApi(n) ||
-  inTypes(n) ||
-  inContract(n) ||
-  fileEndsWith(n, "/src/maniascript/client-only.ts");
+  inAuthoring(n) || inApi(n) || inTypes(n) || inContract(n) || fileIs(n, "maniascript/client-only");
 
 export function unparen(e: ts.Expression): ts.Expression {
   while (ts.isParenthesizedExpression(e)) e = e.expression;
@@ -54,8 +54,12 @@ export function authoringCallKind(
 ): AuthoringKind | undefined {
   const callee = unparen(call.expression);
   if (!ts.isPropertyAccessExpression(callee)) return undefined;
-  const decl = checker.getSymbolAtLocation(callee.name)?.valueDeclaration;
-  if (!decl || !inAuthoring(decl) || !ts.isObjectLiteralExpression(decl.parent)) return undefined;
+  // Source has `const client = { ... }`; built typings have `declare const client: { ... }`
+  const symbol = checker.getSymbolAtLocation(callee.name);
+  const decl = symbol?.valueDeclaration ?? symbol?.declarations?.[0];
+  if (!decl || !inAuthoring(decl)) return undefined;
+  if (!ts.isObjectLiteralExpression(decl.parent) && !ts.isTypeLiteralNode(decl.parent))
+    return undefined;
   const owner = decl.parent.parent;
   if (!ts.isVariableDeclaration(owner) || !ts.isIdentifier(owner.name)) return undefined;
   if (owner.name.text !== "client" || !AUTHORING_KINDS.has(callee.name.text)) return undefined;
@@ -545,7 +549,7 @@ export class Analyzer {
     if (hit) return hit;
     const file = this.program
       .getSourceFiles()
-      .find((f) => norm(f.fileName).endsWith("/src/maniascript/api.generated.ts"));
+      .find((f) => isLibraryFile(f.fileName, "maniascript/api.generated"));
     let out: ts.SignatureDeclaration[] = [];
     if (file) {
       for (const st of file.statements) {
