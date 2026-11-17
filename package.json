@@ -60,7 +60,9 @@
     "compile": "bun bin/maniatsx-compile.ts",
     "send": "bun scripts/send-manialink.ts",
     "visual": "bun --preload ./scripts/preload-compiler.ts scripts/visual.ts",
-    "bridge:install": "bun scripts/install-bridge.ts"
+    "bridge:install": "bun scripts/install-bridge.ts",
+    "design:capture-glyphs": "bun scripts/capture-glyphs.ts",
+    "design:diff": "bun scripts/design-diff.ts"
   },
   "devDependencies": {
     "@evotm/gbxclient": "^1.5.0",

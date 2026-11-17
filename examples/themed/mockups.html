@@ -1,6 +1,8 @@
 <!doctype html>
-<!-- Design mockups for DESIGN.md, drawn on a canvas with Trackmania's text metrics (measured in game, 2026-11-16).
-     ?theme=<name>&full=1 draws one 1920×1080 frame for scripts/design-diff.ts; without it, all themes at half size. -->
+<!-- Design mockups for DESIGN.md, drawn on a canvas. Text is blitted from glyphs.png/glyphs.json (Trackmania's own
+     glyphs, captured by scripts/capture-glyphs.ts); without them it falls back to Montserrat.
+     ?theme=<name>&full=1 draws one 1920×1080 frame for scripts/design-diff.ts; without it, all themes at half size.
+     ?glyphs=<dir> and ?fonts=<dir> set where the atlas and the fallback fonts load from. -->
 <html>
 <head>
 <meta charset="utf-8" />
@@ -15,6 +17,7 @@
 <script>
 const params = new URLSearchParams(location.search);
 const FONTS = params.get("fonts") ?? "fonts";
+const GLYPHS = params.get("glyphs") ?? ".";
 
 // 6 px per manialink unit at 1920×1080; screen origin at the center, y up
 const U = 6;
@@ -29,8 +32,59 @@ const themes = {
 };
 const records = [["1", "Wirtual", "0:24.512"], ["2", "Scrapie", "0:24.689"], ["3", "Massa", "0:24.731"], ["4", "Gwen", "0:24.902"], ["5", "You", "0:25.118"]];
 
-// Trackmania text model, fitted to in-game screenshots: GameFont* is Montserrat at 10.5 + 6 × textsize px
-function label(ctx, w, { x, y, ts, bold, color, text, halign = "left", valign = "top", icon }) {
+// Glyph atlas: per style, an N× oversampled coverage image per glyph. A glyph pixel is a function of
+// (pixel - glyph origin), so any sub-pixel pen position is a bicubic lookup; pens advance by fixed fractional widths.
+let atlas = null;
+const cr = (p0, p1, p2, p3, t) => p1 + 0.5 * t * (p2 - p0 + t * (2 * p0 - 5 * p1 + 4 * p2 - p3 + t * (3 * (p1 - p2) + p3 - p0)));
+function sample(g, X, Y, k, l, sx = 1) {
+  const N = atlas.meta.n, aw = atlas.meta.atlas.w;
+  const fx = ((k - X) / sx) * N - g[4], fy = (l - Y) * N - g[5];
+  const ix = Math.floor(fx), iy = Math.floor(fy), tx = fx - ix, ty = fy - iy;
+  const at = (x, y) => (x < 0 || y < 0 || x >= g[2] || y >= g[3] ? 0 : atlas.gray[(g[1] + y) * aw + g[0] + x]);
+  const rows = [];
+  for (let dy = -1; dy <= 2; dy++) rows.push(cr(at(ix - 1, iy + dy), at(ix, iy + dy), at(ix + 1, iy + dy), at(ix + 2, iy + dy), tx));
+  return Math.max(0, Math.min(255, cr(rows[0], rows[1], rows[2], rows[3], ty)));
+}
+const rgb = (c) => {
+  const h = c.slice(1);
+  const f = h.length === 3 ? h.replace(/./g, "$&$&") : h;
+  return [0, 2, 4].map((i) => parseInt(f.slice(i, i + 2), 16));
+};
+function glyphLabel(ctx, st, text, X, Y, color, halign, valign, maxW) {
+  const N = atlas.meta.n, chars = [...text];
+  const total = chars.reduce((a, c) => a + (st.adv[c] ?? 0), 0);
+  // The game squeezes text horizontally when it is wider than the label's size
+  const sx = maxW && total > maxW ? maxW / total : 1;
+  let pen = halign === "right" ? X - total * sx + st.rightDx : X;
+  const y0 = valign === "center" ? Y + st.centerDy : Y;
+  const placed = [];
+  let bx0 = 1e9, bx1 = -1e9, by0 = 1e9, by1 = -1e9;
+  for (const c of chars) {
+    const g = st.glyphs[c];
+    if (g) {
+      placed.push([g, pen]);
+      bx0 = Math.min(bx0, Math.floor(pen + (g[4] * sx) / N) - 1); bx1 = Math.max(bx1, Math.ceil(pen + ((g[4] + g[2]) * sx) / N) + 1);
+      by0 = Math.min(by0, Math.floor(y0 + g[5] / N) - 1); by1 = Math.max(by1, Math.ceil(y0 + (g[5] + g[3]) / N) + 1);
+    }
+    pen += (st.adv[c] ?? 0) * sx;
+  }
+  if (!placed.length) return;
+  const w = bx1 - bx0 + 1, h = by1 - by0 + 1, a = new Float32Array(w * h);
+  for (const [g, gx] of placed)
+    for (let l = Math.floor(y0 + g[5] / N) - 1; l <= Math.ceil(y0 + (g[5] + g[3]) / N) + 1; l++)
+      for (let k = Math.floor(gx + (g[4] * sx) / N) - 1; k <= Math.ceil(gx + ((g[4] + g[2]) * sx) / N) + 1; k++) {
+        const v = sample(g, gx, y0, k, l, sx) / 255, i = (l - by0) * w + k - bx0;
+        a[i] = v + a[i] * (1 - v); // each glyph is an alpha quad blended over the previous one
+      }
+  // Blend onto the opaque canvas in float, like the game does
+  const img = ctx.getImageData(bx0, by0, w, h), d = img.data, c = rgb(color);
+  for (let i = 0; i < w * h; i++)
+    for (let ch = 0; ch < 3; ch++) d[i * 4 + ch] = Math.round(c[ch] * a[i] + d[i * 4 + ch] * (1 - a[i]));
+  ctx.putImageData(img, bx0, by0);
+}
+
+// Montserrat fallback (approximate): GameFont* is Montserrat at 10.5 + 6 × textsize px
+function fallbackLabel(ctx, w, { x, y, ts, bold, color, text, halign = "left", valign = "top", icon }) {
   const s = w.scale, F = (10.5 + 6 * ts) * s;
   ctx.fillStyle = color;
   if (icon) {
@@ -55,6 +109,12 @@ function label(ctx, w, { x, y, ts, bold, color, text, halign = "left", valign = 
   ctx.fillText(text, drawX, capTop + cap);
 }
 
+function label(ctx, w, o) {
+  const s = w.scale, st = atlas?.meta.styles[`${o.icon || o.bold ? "sb" : "r"}-${o.ts}@${s}`];
+  if (!st) return fallbackLabel(ctx, w, o);
+  glyphLabel(ctx, st, o.text, w.x + o.x * U * s, w.y + o.y * U * s, o.color, o.halign, o.valign, o.width && o.width * U * s - 0.5);
+}
+
 function rect(ctx, w, x, y, wd, h, color, alpha = 1) {
   ctx.globalAlpha = alpha;
   ctx.fillStyle = color;
@@ -73,13 +133,13 @@ function mapInfo(ctx, t) {
   const w = t.compact ? { x: px(-158), y: py(88), scale: 0.8 } : { x: px(103), y: py(88), scale: 1 };
   panel(ctx, w, t, 0, 0, 55, 10);
   if (t.compact) {
-    label(ctx, w, { x: 2, y: 4, ts: 2, color: t.text, text: t.icon, icon: true });
-    label(ctx, w, { x: 8, y: 4, ts: 2, bold: true, color: t.text, text: "A01 - Green Plains" });
-    label(ctx, w, { x: 35, y: 4, ts: 1, color: t.muted, text: "Nadeo" });
+    label(ctx, w, { x: 2, y: 4, ts: 2, color: t.text, text: t.icon, icon: true, bold: true });
+    label(ctx, w, { x: 8, y: 4, ts: 2, bold: true, color: t.text, text: "A01 - Green Plains", width: 25 });
+    label(ctx, w, { x: 35, y: 4, ts: 1, color: t.muted, text: "Nadeo", width: 18 });
   } else {
-    label(ctx, w, { x: 2, y: 2, ts: 3, color: t.text, text: t.icon, icon: true });
-    label(ctx, w, { x: 10, y: 2, ts: 3, bold: true, color: t.text, text: "A01 - Green Plains" });
-    label(ctx, w, { x: 10, y: 6, ts: 1, color: t.muted, text: "Nadeo" });
+    label(ctx, w, { x: 2, y: 2, ts: 3, color: t.text, text: t.icon, icon: true, bold: true });
+    label(ctx, w, { x: 10, y: 2, ts: 3, bold: true, color: t.text, text: "A01 - Green Plains", width: 43 });
+    label(ctx, w, { x: 10, y: 6, ts: 1, color: t.muted, text: "Nadeo", width: 43 });
   }
 }
 
@@ -111,12 +171,46 @@ function draw(name) {
   return canvas;
 }
 
+const load = (url, type) =>
+  new Promise((resolve, reject) => {
+    const x = new XMLHttpRequest();
+    x.open("GET", url);
+    x.responseType = type;
+    x.onload = () => (x.status === 200 || x.status === 0 ? resolve(x.response) : reject(new Error(url)));
+    x.onerror = () => reject(new Error(url));
+    x.send();
+  });
+
+async function loadAtlas() {
+  try {
+    const meta = JSON.parse(await load(`${GLYPHS}/glyphs.json`, "text"));
+    const img = new Image();
+    img.src = URL.createObjectURL(await load(`${GLYPHS}/glyphs.png`, "blob"));
+    await img.decode();
+    const c = document.createElement("canvas");
+    c.width = img.width;
+    c.height = img.height;
+    const cx = c.getContext("2d");
+    cx.drawImage(img, 0, 0);
+    const data = cx.getImageData(0, 0, img.width, img.height).data;
+    const gray = new Uint8Array(img.width * img.height);
+    for (let i = 0; i < gray.length; i++) gray[i] = data[i * 4];
+    atlas = { meta, gray };
+  } catch {
+    console.warn("glyph atlas not found, falling back to Montserrat");
+  }
+}
+
 (async () => {
-  const faces = [["MR", "Montserrat-Regular.ttf"], ["MS", "Montserrat-SemiBold.ttf"], ["FA", "fa-solid-900.ttf"]];
-  for (const [family, file] of faces) {
-    const face = new FontFace(family, `url(${FONTS}/${file})`);
-    await face.load();
-    document.fonts.add(face);
+  await loadAtlas();
+  if (!atlas) {
+    // tnum: the game's digits are tabular
+    const faces = [["MR", "Montserrat-Regular.ttf"], ["MS", "Montserrat-SemiBold.ttf"], ["FA", "fa-solid-900.ttf"]];
+    for (const [family, file] of faces) {
+      const face = new FontFace(family, `url(${FONTS}/${file})`, { featureSettings: '"tnum"' });
+      await face.load();
+      document.fonts.add(face);
+    }
   }
   const only = params.get("theme");
   document.body.className = params.has("full") ? "full" : "grid";

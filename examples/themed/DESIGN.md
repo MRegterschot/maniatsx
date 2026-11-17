@@ -27,3 +27,9 @@ Screen 320×180 units (6 px per unit at 1920×1080), origin at the center, y up.
 
 - **compact**: map-info moves to top-left with scale 0.8 and its compact skin (exists). records: anchor top-left, margin [2, 12], scale 0.8. Panels use the thin variant (exists).
 - **paper**: extends default. Overrides `ui/panel` to add a 0.6-wide `accent` stripe along the panel's left edge, full height, above the background. `records.title` text is "Top times". map-info icon stays the default one.
+
+## Game text rules (measured in game, 2026-11-17)
+
+- `GameFontRegular` / `GameFontSemiBold` are Montserrat-like at about 10.5 + 6 × textsize px (1080p), with **tabular digits** and proportional letters.
+- A label squeezes its text horizontally (height unchanged) when the text is wider than the label's `size`. Label widths are part of the design: map-info name 43 (compact 25), author 43 (compact 18), records name 30, time 20.
+- `bun run design:diff` compares the mockups with the in-game baselines. Remaining differences are a few anti-aliasing pixels in right-aligned and squeezed text, from the game's own glyph filtering.

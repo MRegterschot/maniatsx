@@ -299,6 +299,10 @@ bun run bench       # render benchmark
 
 Conventions are in [AGENTS.md](AGENTS.md).
 
+## Design mockups
+
+`examples/themed/DESIGN.md` is the spec for the themed HUD scene; `examples/themed/mockups.html` is a hand-drawn canvas rendering of it that should match the in-game screenshots (`test/visual/scene-*.png`). Text is blitted from Trackmania's own glyphs in `examples/themed/glyphs.png` and `glyphs.json`, which `bun run design:capture-glyphs` captures from the running game (bridge plugin loaded, a map open); rerun it when the scenes use new text or text styles. Without the atlas the mockups fall back to Montserrat. `bun run design:diff [theme]` renders each theme headless and compares it with the visual baselines, writing diff images to `test/visual/.out/design/`.
+
 ## Roadmap
 
 Phase 2 compiles a TypeScript subset to ManiaScript: client state, event handlers and server actions. Phase 1 keeps the VNode tree so phase 2 can build on it. See [PLAN.md](PLAN.md).
