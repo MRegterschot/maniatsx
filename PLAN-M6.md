@@ -82,3 +82,8 @@ T13 measurement: 47,108-byte bundle; QuickJS evaluation 14.35 ms; three preset r
 | Two JSX runtimes in one monorepo | per-package `jsxImportSource`; G1 typechecks both |
 | Presets drift from plugin skins | slot variant fallback; visual tests per preset in the plugins repo |
 | Game semantics of `for This` across pages | Checked in game 2026-11-16: shared across layers, survives a re-send, and outlives the layer (a later page sees the last published value). Namespace shared keys per plugin (`<pluginId>.<key>`) so stale values from another plugin or an earlier session can't leak in |
+
+## Progress (2026-11-17, branch feat/maniatsx-themes in gocontrolpanel)
+
+- Done: G1 (vendored dist, sync script), G2 (Default preset as data), G3 (component pages; action group and Codriver window ported with Handlebars equivalence tests), G5 (preset picker).
+- Follow-ups: re-send core pages when a server's preset changes (only plugins reload today); in-game check of the ported action group and Codriver window scripts (the equivalence test compares script statements unordered); client-TS compiler in gbx-service comes with G4.
