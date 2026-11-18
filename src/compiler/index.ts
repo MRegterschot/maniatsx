@@ -175,7 +175,9 @@ function transform(
                           ? lowerer.lowerFn()
                           : kind === "onInit" || kind === "onFrame"
                             ? lowerer.lowerLifecycle()
-                            : lowerer.lowerStatements(),
+                            : kind === "handler"
+                              ? lowerer.lowerHandler()
+                              : lowerer.lowerStatements(),
                       ty: undefined,
                     },
               );

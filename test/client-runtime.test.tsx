@@ -48,7 +48,7 @@ describe("client runtime", () => {
     expect(xml).toContain('scriptevents="1"');
     expect(xml).toContain("declare Integer Mtx_S1;");
     expect(xml).toContain("Mtx_S1 = 1;");
-    expect(xml.match(/Void Mtx_H1\(\)/g)).toHaveLength(1);
+    expect(xml.match(/Void Mtx_E1\(CMlScriptEvent Event\)/g)).toHaveLength(1);
     expect(xml).toContain('TriggerPageAction("reset")');
     expect(xml).toContain("Mtx_Dirty = False;");
   });
@@ -208,7 +208,7 @@ describe("persisted state", () => {
     const name = xml.match(/Mtx_P_widget_[0-9a-f]{8}/)![0];
     expect(xml).toContain(`  declare Boolean ${name} for Page = False;`);
     expect(xml).toContain(
-      `Void Mtx_H1() {\ndeclare Boolean ${name} for Page;\n${name} = !${name};`,
+      `Void Mtx_E1(CMlScriptEvent Event) {\ndeclare Boolean ${name} for Page;\n${name} = !${name};`,
     );
     expect(xml).toContain(
       `Void Mtx_F_flip() {\n  declare Boolean ${name} for Page;\n  ${name} = !${name};`,

@@ -139,3 +139,20 @@ test("client.state persist options are baked into the runtime call", () => {
   ])
     expect(compile(bad).diagnostics.map((d) => d.code)).toContain("state-options");
 });
+
+test("a handler's parameter is the script event", () => {
+  const compile = (handler: string) =>
+    compileSource(
+      "test/compiler/event.tsx",
+      `import { client, ml } from "maniatsx/client";
+import { CMlFrame } from "maniatsx/maniascript";
+client.handler(${handler});`,
+    );
+  const ok = compile(
+    `(event) => { const login = (event.Control.Parent as CMlFrame).DataAttributeGet("login"); if (login !== "") ml.SetSpectateTarget(login); }`,
+  );
+  expect(ok.diagnostics).toEqual([]);
+  expect(ok.code).toContain("Event.Control.Parent");
+  expect(ok.code).toContain("SetSpectateTarget");
+  expect(compile("(a, b) => {}").diagnostics).toMatchObject([{ code: "param" }]);
+});

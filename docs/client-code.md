@@ -32,7 +32,7 @@ Classes, `this`, async/await, generators, exceptions, spread/rest, most destruct
 ## Authoring APIs
 
 - `client.state<T>(initial)` declares client-side state. Writes mark bindings dirty.
-- `client.handler(() => { ... })` attaches a handler to supported `on*` element props.
+- `client.handler((event) => { ... })` attaches a handler to supported `on*` element props. The optional `event` is the `CMlScriptEvent`, so one handler can serve many controls, e.g. rows of a `<framemodel>` that share ids: read `event.Control.Parent.DataAttributeGet(...)` to tell them apart.
 - `client.bind(() => value)` updates supported attributes when state changes.
 - `client.ref<CMlLabel>()` creates a typed control reference, attached with `ref={nameRef}`. A used ref must be attached exactly once.
 - `client.fn((args) => ...)` declares a top-level function.

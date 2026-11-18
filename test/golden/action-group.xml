@@ -31,7 +31,7 @@
 declare CMlFrame widget;
 declare CMlFrame Mtx_R1;
 declare CMlLabel Mtx_R2;
-Void Mtx_H1() {
+Void Mtx_E1(CMlScriptEvent Event) {
 declare Boolean Mtx_P_actiongroup_fa4d5dac for Page;
 declare CAnimManager::EAnimManagerEasing ease = CAnimManager::EAnimManagerEasing::ExpInOut;
 if (Mtx_P_actiongroup_fa4d5dac) {
@@ -55,7 +55,7 @@ main() {
     yield;
     foreach (Event in PendingEvents) {
       if (Event.Control == Null) continue;
-      if (Event.Type == CMlScriptEvent::Type::MouseClick && Event.ControlId == "mtx-3") Mtx_H1();
+      if (Event.Type == CMlScriptEvent::Type::MouseClick && Event.ControlId == "mtx-3") Mtx_E1(Event);
     }
   }
 }

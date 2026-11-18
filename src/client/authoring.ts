@@ -12,7 +12,11 @@ import {
   type ClientStateOptions,
 } from "./contract.ts";
 
-import type { CMlControl, CSmMlScriptIngame } from "../maniascript/api.generated.ts";
+import type {
+  CMlControl,
+  CMlScriptEvent,
+  CSmMlScriptIngame,
+} from "../maniascript/api.generated.ts";
 import { clientOnly } from "../maniascript/client-only.ts";
 
 export type { Integer, Real, Text, Ident, Vec2, Vec3, Int2, Int3 } from "../maniascript/types.ts";
@@ -50,8 +54,9 @@ export const client = {
   ref<T extends CMlControl>(): ClientRef<T> {
     return notCompiled("client.ref");
   },
-  // Event handler for on* props (onClick, onRightClick, onMouseOver, onMouseOut, onSubmit)
-  handler(body: () => void): ClientHandler {
+  // Event handler for on* props (onClick, onRightClick, onMouseOver, onMouseOut, onSubmit).
+  // The optional parameter is the script event, e.g. `event.Control` inside a framemodel instance
+  handler(body: (event: CMlScriptEvent) => void): ClientHandler {
     void body;
     return notCompiled("client.handler");
   },

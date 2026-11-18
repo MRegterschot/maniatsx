@@ -130,6 +130,7 @@ export class ClientScope {
   private attached = new Map<ClientRef, { tag: string; id: string }>();
   private functions = new Set<string>();
   private handlers = new Map<string, string>();
+  private eventHandlers = new Map<string, string>();
   private elementCount = 0;
   private controlCount = 0;
   private dirty = false;
@@ -250,6 +251,16 @@ export class ClientScope {
       name = `Mtx_H${this.handlers.size + 1}`;
       this.handlers.set(body, name);
       this.host.part("functions", `Void ${name}() {\n${body}\n}`);
+    }
+    return name;
+  }
+  // Deduped function for an on* handler body; it receives the event
+  private eventHandler(body: string): string {
+    let name = this.eventHandlers.get(body);
+    if (!name) {
+      name = `Mtx_E${this.eventHandlers.size + 1}`;
+      this.eventHandlers.set(body, name);
+      this.host.part("functions", `Void ${name}(CMlScriptEvent Event) {\n${body}\n}`);
     }
     return name;
   }
@@ -395,10 +406,10 @@ export class ClientScope {
       ) {
         out.scriptevents = true;
         const { text, declares } = this.body((handle as ClientHandler).body);
-        const name = this.handler(declares + text);
+        const name = this.eventHandler(declares + text);
         this.host.part(
           "events",
-          `if (Event.Type == CMlScriptEvent::Type::${events[attr]} && Event.ControlId == ${literalText(id)}) ${name}();`,
+          `if (Event.Type == CMlScriptEvent::Type::${events[attr]} && Event.ControlId == ${literalText(id)}) ${name}(Event);`,
         );
       } else if (handle.kind === "bind" && bindings[tag]?.[attr]) {
         this.ensureDirty();
