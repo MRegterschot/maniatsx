@@ -52,6 +52,18 @@ const cases: [string, string, string, RegExp][] = [
     "a.splice(0, 2)",
     /array method `\.splice`/i,
   ],
+  [
+    "indexOf on an array of arrays",
+    "const a: Integer[][] = []; const b: Integer[] = []; const x = a.indexOf(b);",
+    "a.indexOf(b)",
+    /`\.indexOf` on an array of structs or arrays/,
+  ],
+  [
+    "includes on an array of arrays",
+    "const a: Integer[][] = []; const b: Integer[] = []; const x = a.includes(b);",
+    "a.includes(b)",
+    /`\.includes` on an array of structs or arrays/,
+  ],
   ["union type", "let x: Integer | Text;", "Integer | Text", /union type/i],
 ];
 for (const [name, body, marker, message] of cases) {

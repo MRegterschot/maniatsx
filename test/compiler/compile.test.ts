@@ -86,6 +86,25 @@ test("numeric contexts, diagnostics, and division warning", () => {
   ]);
 });
 
+test("inferred vector types keep their ManiaScript name", () => {
+  const { snippets, diagnostics } = compileSnippets(
+    "test/compiler/vectors.tsx",
+    `import { client, type Integer } from "maniatsx/client";
+import { vec2, vec3 } from "maniatsx/maniascript";
+const pick = client.fn((side: Integer) => {
+  if (side === 0) return vec3(0.0, 0.0, 1.0);
+  return vec3(1.0, 0.0, 0.0);
+});
+client.onInit(() => { const p = vec2(1.0, 2.0); const c = pick(1); });`,
+  );
+  expect(diagnostics).toEqual([]);
+  const ms = snippets.map((s) => s.ms).join("\n");
+  expect(ms).toMatch(/Vec3 Mtx_F_\w+\(Integer _side\)/);
+  expect(ms).toContain("declare Vec2 p = <1., 2.>;");
+  expect(ms).toContain("declare Vec3 c =");
+  expect(ms).not.toContain("K_Vec");
+});
+
 test("class references are assigned with <=>, everything else with =", () => {
   const emit = (body: string) => {
     const { snippets, diagnostics } = compileSnippets(
