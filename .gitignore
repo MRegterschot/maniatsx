@@ -4,3 +4,7 @@ dist
 
 test/compiler/.tmp/
 test/visual/.out/
+
+# Captured from the game; regenerate with bun run design:capture-glyphs
+examples/themed/glyphs.png
+examples/themed/glyphs.json
