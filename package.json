@@ -99,8 +99,8 @@
     "xmllint-wasm": "^5.3.0"
   },
   "bin": {
-    "maniatsx": "./bin/maniatsx.js",
-    "maniatsx-compile": "./bin/maniatsx-compile.js"
+    "maniatsx": "bin/maniatsx.js",
+    "maniatsx-compile": "bin/maniatsx-compile.js"
   },
   "dependencies": {
     "typescript6": "npm:typescript@6.0.3"
