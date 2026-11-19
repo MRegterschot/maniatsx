@@ -56,6 +56,10 @@ Do not mix composed parts with a raw `<script>` in one page.
 
 `<Dico translations={{ fr: { greeting: "Salut" }, en: { greeting: "Hello" } }} />` creates a dictionary. Language and entry order is preserved; the last language is the game's fallback. Reference an entry with `textid="greeting"`.
 
+## QuarterCircle
+
+`<QuarterCircle radius={2} quadrant="TopLeft" color="000" pos={[0, 0]} />` draws a quarter circle for rounded quad corners. `quadrant` is `TopLeft`, `TopRight`, `BottomLeft` or `BottomRight`; `pos` is the top-left corner of the quarter. It also takes `opacity` (default 1), `id`, `class`, `action`, `scriptevents` and `z-index`. Put one in each corner of a quad and fill the gaps with plain quads.
+
 ## Render options
 
 `render(node, options)` accepts `pretty`, `contexts`, `onWarning`, and `warnBytes`. Warnings report duplicate IDs, omitted empty tuples or arrays, and output over the byte threshold. Invalid values and invalid placements throw. The default warning handler is `console.warn`.

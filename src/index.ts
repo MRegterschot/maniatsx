@@ -19,3 +19,5 @@ export type {
 export type { ManialinkLayer } from "./intrinsics-overrides.ts";
 export { Dico } from "./dico.tsx";
 export type { DicoProps } from "./dico.tsx";
+export { QuarterCircle } from "./quarter-circle.tsx";
+export type { Quadrant, QuarterCircleProps } from "./quarter-circle.tsx";
