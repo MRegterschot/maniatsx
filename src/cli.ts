@@ -1,3 +1,4 @@
+import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { jsx } from "./jsx-runtime.ts";
@@ -57,6 +58,11 @@ async function main(args: string[]): Promise<void> {
     modulePath = arg;
   }
   if (!modulePath) throw new Error(`A module path is required. ${usage}`);
+  // Bun loads TSX natively; Node needs the loader hook
+  if (typeof (globalThis as { Bun?: unknown }).Bun === "undefined") {
+    const { registerTsxLoader } = await import("./compiler/node-loader.ts");
+    registerTsxLoader(process.cwd());
+  }
   const exports: Record<string, unknown> = await import(pathToFileURL(resolve(modulePath)).href);
   const selected = exports[exportName];
   const available = Object.keys(exports).join(", ") || "(none)";
@@ -104,7 +110,7 @@ async function main(args: string[]): Promise<void> {
     console.error(`Output is ${bytes} bytes, over the warnBytes limit of ${warnBytes}`);
   }
   if (prologCheck && !/^\s*<\?xml\s/.test(xml)) console.error("Warning: XML prolog is missing");
-  if (out) await Bun.write(resolve(out), xml);
+  if (out) await writeFile(resolve(out), xml);
   else process.stdout.write(xml.endsWith("\n") ? xml : xml + "\n");
   console.error(`Output: ${bytes} bytes`);
 }

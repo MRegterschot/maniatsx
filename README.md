@@ -17,7 +17,7 @@ const xml = render(
 );
 ```
 
-Configure TypeScript with `"jsx": "react-jsx"` and `"jsxImportSource": "maniatsx"`. See [getting started](docs/getting-started.md).
+Install with `npm install maniatsx` (Node 22.15+ or Bun). Configure TypeScript with `"jsx": "react-jsx"` and `"jsxImportSource": "maniatsx"`. See [getting started](docs/getting-started.md).
 
 ## Documentation
 

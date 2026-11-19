@@ -3,6 +3,22 @@
   "version": "0.1.0",
   "description": "Write Trackmania manialinks in TSX",
   "license": "MIT",
+  "author": "Marijn Regterschot",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MRegterschot/maniatsx.git"
+  },
+  "homepage": "https://github.com/MRegterschot/maniatsx#readme",
+  "bugs": {
+    "url": "https://github.com/MRegterschot/maniatsx/issues"
+  },
+  "keywords": [
+    "trackmania",
+    "manialink",
+    "maniascript",
+    "tsx",
+    "jsx"
+  ],
   "type": "module",
   "sideEffects": false,
   "files": [
@@ -46,7 +62,7 @@
     }
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.15"
   },
   "scripts": {
     "gen": "bun scripts/gen-intrinsics.ts",
@@ -57,12 +73,13 @@
     "format": "prettier --write src test scripts examples bench",
     "render": "bun --preload ./scripts/preload-compiler.ts src/cli.ts",
     "gen:maniascript": "bun scripts/gen-maniascript-api.ts",
-    "compile": "bun bin/maniatsx-compile.ts",
+    "compile": "bun scripts/compile.ts",
     "send": "bun scripts/send-manialink.ts",
     "visual": "bun --preload ./scripts/preload-compiler.ts scripts/visual.ts",
     "bridge:install": "bun scripts/install-bridge.ts",
     "design:capture-glyphs": "bun scripts/capture-glyphs.ts",
-    "design:diff": "bun scripts/design-diff.ts"
+    "design:diff": "bun scripts/design-diff.ts",
+    "prepack": "bun run build"
   },
   "devDependencies": {
     "@evotm/gbxclient": "^1.5.0",
@@ -82,8 +99,8 @@
     "xmllint-wasm": "^5.3.0"
   },
   "bin": {
-    "maniatsx": "./bin/maniatsx.ts",
-    "maniatsx-compile": "./bin/maniatsx-compile.ts"
+    "maniatsx": "./bin/maniatsx.js",
+    "maniatsx-compile": "./bin/maniatsx-compile.js"
   },
   "dependencies": {
     "typescript6": "npm:typescript@6.0.3"

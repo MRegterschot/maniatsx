@@ -33,6 +33,14 @@ Use `maniatsxEsbuildPlugin()` when compiling a bundle with esbuild, including pl
 
 Pass `keyPrefix` to `maniatsxEsbuildPlugin({ keyPrefix: "plugin_name" })` for the same storage namespace.
 
+## `maniatsx` render CLI
+
+`maniatsx` renders a module's export to XML. Both CLIs run on Node 22.15 or later, or on Bun; on Node, `.ts` and `.tsx` modules are transpiled on import and client code is compiled like the bundler plugins do:
+
+```sh
+maniatsx ui/page.tsx --props '{"title":"Hello"}' --pretty --out page.xml
+```
+
 ## `maniatsx compile`
 
 The `maniatsx compile` CLI compiles a project using its tsconfig. The installed bin is named `maniatsx-compile`:

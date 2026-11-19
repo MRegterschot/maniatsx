@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 
 const repo = process.cwd();
-const cli = path.join(repo, "bin/maniatsx-compile.ts");
+const cli = path.join(repo, "scripts/compile.ts");
 
 test("CLI writes transformed files, optionally copies others, and checks without writing", async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), "maniatsx-p2-5-"));
