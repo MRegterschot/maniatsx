@@ -57,8 +57,8 @@ maniatsx-compile --project tsconfig.json --out compiled --key-prefix plugin_name
 
 The renderer is plain ES2022 with no runtime package dependencies, which allows it to run in QuickJS. The M6 smoke test bundled a themed widget to 47,108 bytes; evaluation took 14.35 ms, and three preset renders took 3.67 ms, 1.51 ms, and 1.24 ms (default, midnight, compact). These are measurements of that test bundle, not runtime limits. Host functions cannot cross the QuickJS boundary; pass theme and render data as serialisable values.
 
-## Vendoring
+## Releases
 
-The gocontrolpanel repository vendors this project as `packages/maniatsx`. Its sync script updates the vendored package and records the upstream source commit in `VENDORED.json`. Use that script rather than copying files by hand so the recorded revision stays accurate.
+The package is published to npm as `maniatsx`, and gocontrolpanel depends on it from there. Releases use staged publishing: `npm stage publish --access public`, then approve the staged version with 2FA (`npm stage approve <id>`).
 
 Source: `package.json`
